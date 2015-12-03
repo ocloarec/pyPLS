@@ -35,7 +35,7 @@ def pqn(X, reference=None, sigma=1e-14):
 
     if reference is None:
         pc = prcomp(X, 2, scaling=0)
-        refIndex = np.argmin(np.sqrt(pc.scores[0]**2 + pc.scores[1]**2))
+        refIndex = np.argmin(np.sqrt(pc.scores(1)**2 + pc.scores(2)**2))
         reference = X[refIndex, :]
 
     # Strip the noise or zero values
