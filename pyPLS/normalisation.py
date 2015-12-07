@@ -6,7 +6,7 @@ from pyPLS.pca import prcomp
 
 def unit(X):
     """
-    :param X: Matrix to be noemalised
+    :param X: Matrix to be normalised
     :return: a normalised matrix, factor used for normalisation, reference vector
     """
 

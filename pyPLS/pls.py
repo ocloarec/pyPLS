@@ -6,8 +6,8 @@ import engines
 import preprocessing as prep
 
 
-class pls(lvmodel):
-    def __init__(self, X, Y, scaling=0, varMetadata=None, obsMetadata=None):
+class _pls(lvmodel):
+    def __init__(self, X, Y, scaling=0):
         lvmodel.__init__(self)
 
         # Adding weights
@@ -15,32 +15,35 @@ class pls(lvmodel):
 
         # If X is a Pandas DataFrame
         if isinstance(X, pd.DataFrame):
-            if not varMetadata:
-                self.varMetadata = X.columns()
-            else:
-                # TODO: check varMetadata consistency
-                self.varMetadata = varMetadata
             X = X.as_matrix()
 
+        if isinstance(X, list):
+            try:
+                X = np.asarray(X, dtype=np.float64)
+            except ValueError:
+                raise ValueError("Cannot cast X into an array of floats")
+
         if isinstance(X, np.ndarray):
+
             try:
                 n, p = X.shape
             except ValueError:
                 raise ValueError("X must be a 2D numpy array")
 
         else:
-            raise ValueError("Your table (X) as a unsupported type")
+            raise ValueError("X must be an array like object")
 
         if isinstance(Y, pd.DataFrame):
-            if not varMetadata:
-                self.varMetadata = Y.columns()
-            else:
-                # TODO: check varMetadata consistency
-                self.varMetadata = varMetadata
             Y = Y.as_matrix()
 
         if type(Y) == pd.Series:
             Y = Y.as_matrix()
+
+        if isinstance(Y, list):
+            try:
+                Y = np.asarray(Y, dtype=np.float64)
+            except ValueError:
+                raise ValueError("Cannot cast X into an array of floats")
 
         if isinstance(Y, np.ndarray):
             if Y.shape[0] != n:
@@ -51,7 +54,7 @@ class pls(lvmodel):
             if Y.ndim > 2:
                 raise ValueError("Y cannot have more than 2 dimensions")
         else:
-            raise ValueError("Your table (Y) as a no supported type")
+            raise ValueError("Y must be an array like object")
 
         if Y.ndim < 2:
             Y = np.expand_dims(Y, axis=1)
@@ -97,10 +100,50 @@ class pls(lvmodel):
             return None
 
 
-class pls1(pls):
-    def __init__(self, X, y, a, cvfold=None, scaling=0, varMetadata=None, obsMetadata=None):
+class pls1(_pls):
+    """
+    This is the classic univariate NIPALS PLS algorithm.
+    Parameters
+    ----------
+        X: {N, P} array like
+            a table of N observations (rows) and P variables (columns) - The explanatory variables,
+        y: {N, 1} array like
+            a list of N the corresponding values of the dependent variable,
+        a: int
+            the number of PLS component to be fitted
+        scaling: float, optional
+            A number typically between 0.0 and 1.0 corresponding to the scaling, typical example are
+            0.0 corresponds to mean centring
+            0.5 corresponds to Pareto scaling
+            1.0 corresponds to unit variance scaling
+        cvfold: int, optional
+            the number of folds in the cross-validation - default is 7
 
-        pls.__init__(self, X, y, scaling=scaling, varMetadata=varMetadata, obsMetadata=obsMetadata)
+    Returns
+    -------
+    out : a pls1 object with a components
+        Attributes:
+            W : PLS weights table
+            T : PLS scores table
+            P : PLS loadings table
+            C : PLS score regression coefficients
+            B : PLS regression coefficients
+            Yhat: model predicted Y
+            Yhatcv: cross-validation predicted Y
+            R2Y: Determination coefficient of Y
+            Q2Y: Cross validation parameter
+
+        Methods:
+            scores(n), loadings(n), weights(n)
+                n: int
+                    component id
+                return the scores of the nth component
+
+    """
+
+    def __init__(self, X, y, a, scaling=0, cvfold=7):
+
+        _pls.__init__(self, X, y, scaling=scaling)
 
         if self.missingValuesInY:
             raise ValueError("noPLS1 does not support missing values in y")
@@ -146,10 +189,49 @@ class pls1(pls):
         self.R2X = np.sum(self.T.dot(self.P.T))/self.SSX
 
 
-class pls2(pls):
+class pls2(_pls):
+    """
+    This is the classic multivariate NIPALS PLS algorithm.
+    Parameters:
+        X: {N, P} array like
+            a table of N observations (rows) and P variables (columns) - The explanatory variables,
+        Y: {N, Q} array like
+            a table of N observations (rows) and Q variables (columns) - The dependent variables,
+        a: int
+            the number of PLS component to be fitted
+        scaling: float, optional
+            A number typically between 0.0 and 1.0 corresponding to the scaling, typical example are
+            0.0 corresponds to mean centring
+            0.5 corresponds to Pareto scaling
+            1.0 corresponds to unit variance scaling
+        cvfold: int, optional
+            the number of folds in the cross-validation - default is 7
+
+        Returns
+        -------
+        out : a pls2 object with a components
+            Attributes:
+                W : PLS weights table
+                T : PLS scores table
+                P : PLS loadings table
+                C : PLS score regression coefficients
+                B : PLS regression coefficients
+                Yhat: model predicted Y
+                Yhatcv: cross-validation predicted Y
+                R2Y: Determination coefficients of Y
+                Q2Ycol: Cross validation parameters per colums of Y
+                Q2Ycum: Cumulative cross validation parameter
+
+            Methods:
+                scores(n), loadings(n), weights(n)
+                    n: int
+                        component id
+                    return the scores of the nth component
+
+    """
     def __init__(self, X, Y, a, cvfold=None, scaling=0, varMetadata=None, obsMetadata=None):
 
-        pls.__init__(self, X, Y, scaling=scaling, varMetadata=varMetadata, obsMetadata=obsMetadata)
+        _pls.__init__(self, X, Y, scaling=scaling)
 
         self.model = "pls2"
         missingValues = False
@@ -194,22 +276,56 @@ class pls2(pls):
         self.R2X = np.sum(self.T.dot(self.P.T))/self.SSX
 
 
-class nopls1(pls):
+class nopls1(_pls):
+    """
+        This is the univariate noPLS algorithm.
+        Parameters:
+            X: {N, P} array like
+                a table of N observations (rows) and P variables (columns) - The explanatory variables,
+            Y: {N, 1} array like
+                a list of N the corresponding values of the dependent variable,
+            ncp: int
+                a fixed number of component to be fitted. Default the number of component is found by the algorithm itself. See algorithm description
+            scaling: float, optional
+                A number typically between 0.0 and 1.0 corresponding to the scaling, typical example are
+                0.0 corresponds to mean centring
+                0.5 corresponds to Pareto scaling
+                1.0 corresponds to unit variance scaling
+            cvfold: int, optional
+                the number of folds in the cross-validation - default is 7
+
+        Returns
+        -------
+        out : a nopls1 object with ncp components
+            Attributes:
+                ncp: number of components fitted
+                T : PLS scores table
+                P : PLS loadings table
+                C : PLS score regression coefficients
+                B : PLS regression coefficients
+                Yhat: model predicted Y
+                Yhatcv: cross-validation predicted Y
+                R2Y: Determination coefficients of Y
+                Q2Ycol: Cross validation parameters per colums of Y
+                Q2Ycum: Cumulative cross validation parameter
+
+            Methods:
+                scores(n), loadings(n), weights(n)
+                    n: int
+                        component id
+                    return the scores of the nth component
+
+    """
+
+
     def __init__(self, X, Y,
                  ncp=None,
                  scaling=0,
                  cvfold=None,
                  varMetadata=None,
                  obsMetadata=None):
-        """
 
-        @param X: numpy array for the predictor variables matrix
-        @param y: numpy array for the response variable vector
-        @param cvfold: number of fold for the cross validation
-
-        """
-
-        pls.__init__(self, X, Y, scaling=scaling, varMetadata=varMetadata, obsMetadata=obsMetadata)
+        _pls.__init__(self, X, Y, scaling=scaling)
 
         if self.missingValuesInY:
             raise ValueError("noPLS1 does not support missing values in y")
@@ -221,7 +337,6 @@ class nopls1(pls):
 
         if np.isnan(XX).any():
             raise ValueError("Calculation of XX' leads to missing values!")
-
 
         self.model = "mpls1"
         T, C = engines.nopls1(XX, self.Y, ncp=ncp)
@@ -272,10 +387,47 @@ class nopls1(pls):
         self.R2X = np.sum(self.T.dot(self.P.T))/self.SSX
 
 
-class nopls2(pls):
+class nopls2(_pls):
+    """
+        This is the multivariate noPLS algorithm.
+        Parameters:
+            X: {N, P} array like
+                a table of N observations (rows) and P variables (columns) - The explanatory variables,
+            Y: {N, Q} array like
+                a table of N observations (rows) and Q variables (columns) - The dependent variables,
+            scaling: float, optional
+                A number typically between 0.0 and 1.0 corresponding to the scaling, typical example are
+                0.0 corresponds to mean centring
+                0.5 corresponds to Pareto scaling
+                1.0 corresponds to unit variance scaling
+            cvfold: int, optional
+                the number of folds in the cross-validation - default is 7
+
+        Returns
+        -------
+        out : a nopls2 object with ncp components
+            Attributes:
+                ncp: number of components fitted
+                T : PLS scores table
+                P : PLS loadings table
+                C : PLS score regression coefficients
+                B : PLS regression coefficients
+                Yhat: model predicted Y
+                Yhatcv: cross-validation predicted Y
+                R2Y: Determination coefficients of Y
+                Q2Ycol: Cross validation parameters per colums of Y
+                Q2Ycum: Cumulative cross validation parameter
+
+            Methods:
+                scores(n), loadings(n), weights(n)
+                    n: int
+                        component id
+                    return the scores of the nth component
+
+    """
     def __init__(self, X, Y, cvfold=None, scaling=0, varMetadata=None, obsMetadata=None, ncp=None, err_lim=1e-9, nloop_max=200):
 
-        pls.__init__(self, X, Y, scaling=scaling, varMetadata=varMetadata, obsMetadata=obsMetadata)
+        _pls.__init__(self, X, Y, scaling=scaling)
 
         self.model = "nopls2"
         missingValues = False

@@ -7,6 +7,35 @@ import engines
 
 
 class prcomp(lvmodel):
+    """
+    Principal component analysis
+        Parameters:
+            X: {N, P} array like
+                a table of N observations (rows) and P variables (columns) - The explanatory variables,
+            scaling: float, optional
+                A number typically between 0.0 and 1.0 corresponding to the scaling, typical example are
+                0.0 corresponds to mean centring
+                0.5 corresponds to Pareto scaling
+                1.0 corresponds to unit variance scaling
+
+        Returns
+        -------
+        out : a nopls2 object with ncp components
+            Attributes:
+                ncp: number of components fitted
+                T :  scores table
+                P :  loadings table
+                E :  residual table
+                R2X: Part of variance of X explained by individual components
+                R2Xcum: Total variance explained by all the components
+
+            methods:
+            scores(n), loadings(n)
+                n: int
+                    component id
+                return the scores of the nth component
+
+    """
 
     def __init__(self, X, a, scaling=0, varMetadata=None):
 
