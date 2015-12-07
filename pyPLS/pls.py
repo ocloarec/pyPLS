@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 import pandas as pd
 from _PLSbase import lvmodel
@@ -12,6 +13,7 @@ class _pls(lvmodel):
 
         # Adding weights
         self.W = None
+        self.B = None
 
         # If X is a Pandas DataFrame
         if isinstance(X, pd.DataFrame):
@@ -69,6 +71,7 @@ class _pls(lvmodel):
 
         self.X, self.Xbar, self.Xstd = prep.scaling(X, scaling)
         self.Y, self.Ybar, self.Ystd = prep.scaling(Y, scaling)
+        self.scaling = scaling
 
         self.missingValuesInX = False
         if np.isnan(X).any():
@@ -98,6 +101,17 @@ class _pls(lvmodel):
             return np.array(self.W[:, n-1])
         else:
             return None
+
+    def predict(self, Xnew):
+        if self.B is not None:
+            Xw = (Xnew - self.Xbar)
+            Xw = Xw / (self.Xstd ** self.scaling)
+
+            Yhat = Xw @ self.B
+
+            Yhat = Yhat * (self.Ystd ** self.scaling) + self.Ybar
+
+            return Yhat
 
 
 class pls1(_pls):
@@ -551,7 +565,11 @@ if __name__ == '__main__':
     print("R2Y = " + str(out.R2Y))
     print("Q2Y = " + str(out.Q2Y))
     print("Orthogonality of T : " + str(np.linalg.det(out.T.T.dot(out.T))*100) + "%")
+    print("Prediction ")
+    print("Real value: " + str(Yt[0,0]))
+    print("Predicted value: " + str(out.predict(Xt[0,:])))
     print()
+
     print("Testing noPLS2 with one column in Y...")
     out = nopls2(Xt, Yt[:, 0], cvfold=7)
     print("Number of components: " + str(out.ncp))
