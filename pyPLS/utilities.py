@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 def nanmatprod(ma, mb):
     """
@@ -81,6 +82,45 @@ def ROCanalysis(Yhat, classes, positive, npoints=50):
 
     return specificity, sensitivity
 
+
+def isValid(X, forPrediction=False):
+    """
+    Check validity of input for PLS and PCA
+    :param X: an array like
+    :return: the validated numpy array
+    """
+    # If X is a Pandas DataFrame
+    if isinstance(X, pd.DataFrame):
+        X = X.as_matrix()
+
+    if type(X) == pd.Series:
+        X = X.as_matrix()
+
+    if isinstance(X, list):
+        try:
+            X = np.asarray(X, dtype=np.float64)
+        except ValueError:
+            raise ValueError("Cannot cast X into an array of floats")
+
+    if X.ndim > 2:
+        raise ValueError("Y cannot have more than 2 dimensions")
+
+    if X.ndim < 2:
+        if forPrediction is True:
+            X = np.expand_dims(X, axis=0)
+        else:
+            X = np.expand_dims(X, axis=1)
+
+    if isinstance(X, np.ndarray):
+        try:
+            n, p = X.shape
+        except ValueError:
+            raise ValueError("X must be a 2D numpy array")
+
+    else:
+        raise ValueError("X must be an array like object")
+
+    return X, n, p
 
 if __name__ == '__main__':
     a = np.random.randn(30, 20)

@@ -2,7 +2,7 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 from _PLSbase import lvmodel
-from utilities import nanmatprod
+from utilities import nanmatprod, isValid
 import engines
 import preprocessing as prep
 
@@ -14,58 +14,19 @@ class _pls(lvmodel):
         # Adding weights
         self.W = None
         self.B = None
+        # Checking if X and Y are valid
+        X, nx, px = isValid(X)
+        Y, ny, py = isValid(Y)
 
-        # If X is a Pandas DataFrame
-        if isinstance(X, pd.DataFrame):
-            X = X.as_matrix()
-
-        if isinstance(X, list):
-            try:
-                X = np.asarray(X, dtype=np.float64)
-            except ValueError:
-                raise ValueError("Cannot cast X into an array of floats")
-
-        if isinstance(X, np.ndarray):
-
-            try:
-                n, p = X.shape
-            except ValueError:
-                raise ValueError("X must be a 2D numpy array")
-
+        if nx != ny :
+            raise ValueError("X and Y must have the same number of rows")
         else:
-            raise ValueError("X must be an array like object")
-
-        if isinstance(Y, pd.DataFrame):
-            Y = Y.as_matrix()
-
-        if type(Y) == pd.Series:
-            Y = Y.as_matrix()
-
-        if isinstance(Y, list):
-            try:
-                Y = np.asarray(Y, dtype=np.float64)
-            except ValueError:
-                raise ValueError("Cannot cast X into an array of floats")
-
-        if isinstance(Y, np.ndarray):
-            if Y.shape[0] != n:
-                Y = Y.T
-                if Y.shape[0] != n:
-                    raise ValueError("Y must have a dimension equal to the number of rows in X")
-
-            if Y.ndim > 2:
-                raise ValueError("Y cannot have more than 2 dimensions")
-        else:
-            raise ValueError("Y must be an array like object")
-
-        if Y.ndim < 2:
-            Y = np.expand_dims(Y, axis=1)
-
-        n, py = Y.shape
+            n = nx
 
         # Check scaling
         if isinstance(scaling, int):
             scaling = float(scaling)
+
         if not isinstance(scaling, float):
             raise ValueError("scaling must be a number")
 
@@ -93,7 +54,7 @@ class _pls(lvmodel):
             self.SSYcol = np.sum(self.Y**2, axis=0)
 
         self.n = n
-        self.px = p
+        self.px = px
         self.py = py
 
     def weights(self, n):
@@ -104,14 +65,20 @@ class _pls(lvmodel):
 
     def predict(self, Xnew):
         if self.B is not None:
-            Xw = (Xnew - self.Xbar)
-            Xw = Xw / (self.Xstd ** self.scaling)
+            Xnew, nnew, pxnew = isValid(Xnew, forPrediction=True)
+            if pxnew == self.px:
+                Xw = (Xnew - self.Xbar)
+                Xw = Xw / (self.Xstd ** self.scaling)
 
-            Yhat = Xw @ self.B
+                Yhat = Xw @ self.B
 
-            Yhat = Yhat * (self.Ystd ** self.scaling) + self.Ybar
+                Yhat = Yhat * (self.Ystd ** self.scaling) + self.Ybar
 
-            return Yhat
+                return Yhat
+
+            else:
+                raise ValueError("New observations do not have the same number of variables!!")
+
 
 
 class pls1(_pls):
@@ -152,6 +119,11 @@ class pls1(_pls):
                 n: int
                     component id
                 return the scores of the nth component
+
+            predict(Xnew)
+                Xnew: array like
+                    new observation with the same number of variables tha X
+                return predicted Y
 
     """
 
@@ -242,6 +214,11 @@ class pls2(_pls):
                         component id
                     return the scores of the nth component
 
+                predict(Xnew)
+                Xnew: array like
+                    new observation with the same number of variables tha X
+                return predicted Y
+
     """
     def __init__(self, X, Y, a, cvfold=None, scaling=0, varMetadata=None, obsMetadata=None):
 
@@ -328,6 +305,11 @@ class nopls1(_pls):
                     n: int
                         component id
                     return the scores of the nth component
+
+                predict(Xnew)
+                Xnew: array like
+                    new observation with the same number of variables tha X
+                return predicted Y
 
     """
 
@@ -437,7 +419,10 @@ class nopls2(_pls):
                     n: int
                         component id
                     return the scores of the nth component
-
+            predict(Xnew)
+                Xnew: array like
+                    new observation with the same number of variables tha X
+                return predicted Y
     """
     def __init__(self, X, Y, cvfold=None, scaling=0, varMetadata=None, obsMetadata=None, ncp=None, err_lim=1e-9, nloop_max=200):
 
