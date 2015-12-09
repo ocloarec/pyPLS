@@ -13,6 +13,7 @@ class prcomp(lvmodel):
         Parameters:
             X: {N, P} array like
                 a table of N observations (rows) and P variables (columns) - The explanatory variables,
+            a: The number of component to be fitted
             scaling: float, optional
                 A number typically between 0.0 and 1.0 corresponding to the scaling, typical example are
                 0.0 corresponds to mean centring
@@ -21,7 +22,7 @@ class prcomp(lvmodel):
 
         Returns
         -------
-        out : a nopls2 object with ncp components
+        out : a pca object with ncp components
             Attributes:
                 ncp: number of components fitted
                 T :  scores table
