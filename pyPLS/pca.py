@@ -3,7 +3,8 @@ import pandas as pd
 
 from pyPLS import preprocessing
 from pyPLS._PLSbase import lvmodel
-import engines
+from pyPLS.utilities import isValid
+from .engines import pca as _pca
 
 
 class prcomp(lvmodel):
@@ -37,34 +38,43 @@ class prcomp(lvmodel):
 
     """
 
-    def __init__(self, X, a, scaling=0, varMetadata=None):
+    def __init__(self, X, a, scaling=0):
 
         lvmodel.__init__(self)
         self.model = "pca"
 
-        if type(X) == pd.DataFrame:
-            if not varMetadata:
-                self.varMetadata = X.columns
-            else:
-                # TODO: check varMetadata consistency
-                self.varMetadata = varMetadata
-            X = X.as_matrix()
+        X, self.n, self.p = isValid(X)
 
         if type(X) == np.ndarray:
             X, self.Xbar, self.Xstd = preprocessing.scaling(X, scaling)
-            self.T, self.P, self.E, self.R2X = engines.pca(X, a)
+            self.T, self.P, self.E, self.R2X = _pca(X, a)
+            self.ncp = a
             self.cumR2X = np.sum(self.R2X)
         else:
             raise ValueError("Your table (X) as an unsupported type")
+
     def summary(self):
-        # TODO: Implement a summary
-        pass
+        missing_values = np.sum(np.isnan(self.E))
+        missing_value_ratio = missing_values / (self.p*self.n)
+        print("Summary of input table")
+        print("----------------------")
+        print("Observations: " + str(self.n))
+        print("Variables: " + str(self.p))
+        print("Missing values: " + str(missing_values) + " (" + str(missing_value_ratio) + "%)")
+        print()
+        print("Summary of PCA:")
+        print("---------------")
+        print("Number of components: " + str(self.ncp))
+        print("Total Variance explained: " + str(np.round(self.cumR2X,3)*100)+ "%")
+        print("Variance explained by component:")
+        for i, r2x in enumerate(self.R2X):
+            print("    - Component " + str(i+1) + " : " + str(np.round(r2x,3)*100)+ "%")
 
 if __name__ == '__main__':
     Xt = np.random.randn(20, 100)
     yt = np.random.randn(20, 1)
-    # Xt[0, 6] = np.nan
+    Xt[0, 6] = np.nan
     pc = prcomp(Xt, 3, scaling=1)
-    print(pc.R2X)
+    pc.summary()
 
 

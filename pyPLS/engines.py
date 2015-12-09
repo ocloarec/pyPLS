@@ -1,5 +1,5 @@
 import numpy as np
-from utilities import nanmatprod
+from .utilities import nanmatprod
 
 ELIM = 1e-12
 
@@ -34,12 +34,12 @@ def pca(X, a):
         T = T[:, :a]
 
         if np.isnan(X).any():
-            for i in xrange(a):
+            for i in np.arange(a):
                 P[:, i] = nanmatprod(X.T, T[:, i])[:, 0]
                 P[:, i] = P[:, i] / np.sqrt(np.sum(P[:, i]**2))
                 E = X - np.outer(T[:, i], P[:, i])
         else:
-            for i in xrange(a):
+            for i in np.arange(a):
                 P[:, i] = X.T.dot(T[:, i])
                 P[:, i] = P[:, i] / np.sqrt(np.sum(P[:, i]**2))
                 E = X - np.outer(T[:, i], P[:, i])
@@ -59,7 +59,7 @@ def nipals(X, a):
     T = None
     p = np.zeros((X.shape[1],))
 
-    for i in xrange(a):
+    for i in np.range(a):
         t = np.mean(X, axis=1)
         nloop = 0
         err = np.Inf
