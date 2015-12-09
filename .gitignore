@@ -6,7 +6,7 @@ __pycache__/
 *.so
 
 # PyCharm hidden files
-.idea/
+.idea/*
 
 # Distribution / packaging
 .Python
