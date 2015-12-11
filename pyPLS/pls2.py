@@ -50,7 +50,7 @@ class pls2(_pls):
                 return predicted Y
 
     """
-    def __init__(self, X, Y, a, cvfold=None, scaling=0, varMetadata=None, obsMetadata=None):
+    def __init__(self, X, Y, a, cvfold=None, scaling=0):
 
         _pls.__init__(self, X, Y, scaling=scaling)
 

@@ -249,7 +249,7 @@ def nopls2(XX, YY, ncp=None, err_lim=1e-9, nloop_max=200, warning_tag=True):
     nc = 0
     uXXu = 1.
 
-    u = np.mean(YY,0)
+    u = YY[:,0]
 
     if not ncp:
         ncp = np.inf
@@ -273,7 +273,6 @@ def nopls2(XX, YY, ncp=None, err_lim=1e-9, nloop_max=200, warning_tag=True):
             # Applying the correction on the diagonal of YY
             if nc < 2:
                 YY = diagonal_correction(YY, t, n)
-
             u_new = YY @ t
             u_new = u_new/np.sqrt(np.sum(u_new**2))
 
