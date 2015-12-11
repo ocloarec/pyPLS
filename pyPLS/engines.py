@@ -3,21 +3,23 @@ from .utilities import nanmatprod
 
 ELIM = 1e-12
 
+
 def foo(r, X, Y):
     X = np.asarray(X)
     Y = np.asarray(Y)
-    XX = X.dot(X.T)
+    XX = X @ X.T
     n, p = XX.shape
     H = (np.eye(n) - np.ones((n, n), dtype=float)/n)
     diagXX = np.mean(np.diag(XX))
-    XX -= diagXX*r*np.identity(n)
-    XX = H.T.dot(XX).dot(H)
-    Yproj = XX.dot(Y)
+    XX -= diagXX * r * np.identity(n)
+    XX = H.T @ XX @ H
+    Yproj = XX @ Y
     return np.sum(Yproj * Y, 0)
 
 
 def foo2(r, X, Y):
     return np.abs(np.mean(foo(r, X, Y)))
+
 
 def pca(X, a):
     if isinstance(X, np.ndarray):
@@ -25,13 +27,14 @@ def pca(X, a):
         if np.isnan(X).any():
             XX = nanmatprod(X, X.T)
         else:
-            XX = X.dot(X.T)
+            XX = X @ X.T
 
         u, s, v = np.linalg.svd(XX)
         S = np.eye(len(s))*s
         P = np.zeros((X.shape[1], a))
         T = np.sqrt(S).dot(u.T).T
         T = T[:, :a]
+        E = X
 
         if np.isnan(X).any():
             for i in np.arange(a):
@@ -40,7 +43,7 @@ def pca(X, a):
                 E = X - np.outer(T[:, i], P[:, i])
         else:
             for i in np.arange(a):
-                P[:, i] = X.T.dot(T[:, i])
+                P[:, i] = X.T @ T[:, i]
                 P[:, i] = P[:, i] / np.sqrt(np.sum(P[:, i]**2))
                 E = X - np.outer(T[:, i], P[:, i])
 
@@ -59,15 +62,15 @@ def nipals(X, a):
     T = None
     p = np.zeros((X.shape[1],))
 
-    for i in np.range(a):
+    for i in np.arange(a):
         t = np.mean(X, axis=1)
         nloop = 0
         err = np.Inf
         while err > ELIM and nloop < 1000:
             p_old = p
-            p = X.T.dot(t) / np.sum(t * t)
+            p = X.T @ t / np.sum(t * t)
             p = p / np.sqrt(sum(p * p))
-            t = X.dot(p)
+            t = X @ p
             err = np.sum((p_old - p) * (p_old - p))
             nloop += 1
 
@@ -100,13 +103,13 @@ def pls1(X, y, a, missing_values=False):
             t = nanmatprod(X, w)
             p = nanmatprod(X.T, t) / np.sum(t * t)
         else:
-            w = X.T.dot(y)
+            w = X.T @ y
             w = w / np.sqrt(np.sum(w * w))
-            t = X.dot(w)
-            p = X.T.dot(t) / np.sum(t * t)
+            t = X @ w
+            p = X.T @ t / np.sum(t * t)
 
         X = X - np.outer(t, p)
-        c[i] = y.T.dot(t) / np.sum(t * t)
+        c[i] = y.T @ t / np.sum(t * t)
         y = y - c[i]*t
         T[:, i] = t[:,0]
         P[:, i] = p[:,0]
@@ -136,29 +139,29 @@ def pls2(X, Y, a, missing_values=False, err_lim=0.00001):
             u = np.nanmean(Y, 1)
             while error > err_lim:
                 w = nanmatprod(X.T, u)[:,0]
-                w = w/np.sqrt(w.T.dot(w))
+                w = w/np.sqrt(np.inner(w, w))
                 t = nanmatprod(X, w)[:,0]
-                c = nanmatprod(Y.T, t)/(t.T.dot(t))
+                c = nanmatprod(Y.T, t) / np.inner(t, t)
                 c = c[:, 0]
-                u = nanmatprod(Y, c)/(c.T.dot(c))
+                u = nanmatprod(Y, c) / np.inner(c, c)
                 u = u[:, 0]
                 error = np.sum((w - wo)**2)
                 wo = w
 
-            p = nanmatprod(X.T, t)[:,0] / (t.T.dot(t))
+            p = nanmatprod(X.T, t)[:,0] / np.inner(t, t)
 
         else:
             u = np.mean(Y, 1)
             while error > err_lim:
-                w = X.T.dot(u)
+                w = X.T @ u
                 w = w/np.sqrt(np.inner(w, w))
-                t = X.dot(w)
-                c = Y.T.dot(t)/np.inner(t, t)
-                u = Y.dot(c)/np.inner(c, c)
+                t = X @ w
+                c = Y.T @ t / np.inner(t, t)
+                u = Y @ c / np.inner(c, c)
                 error = np.sum((w - wo)**2)
                 wo = w
 
-            p = X.T.dot(t)/np.inner(t, t)
+            p = X.T @ t / np.inner(t, t)
 
         X = X - np.outer(t, p)
         Y = Y - np.outer(t, c)
@@ -186,7 +189,7 @@ def diagonal_correction(ZZ, v, n):
 
     ZZ = ZZ - correction
     # ZZ is then recentred
-    ZZ = H.T.dot(ZZ).dot(H)
+    ZZ = H.T @ ZZ @ H
     return ZZ
 
 
@@ -209,12 +212,12 @@ def nopls1(XX, y, ncp=None):
 
     while yXXy > yXXylim and nc < ncp:
         nc += 1
-        t = XX.dot(y)
+        t = XX @ y
         t = t/np.sqrt(np.sum(t**2))
-        c = y.T.dot(t)
-        pp = t.T.dot(XX).dot(t)
-        Xpt = XX.dot(np.outer(t, t))
-        tpX = np.outer(t, t).dot(XX)
+        c = y.T @ t
+        pp = t.T @ XX @ t
+        Xpt = XX @ np.outer(t, t)
+        tpX = np.outer(t, t) @ XX
         # Deflation of y
         y = y - c * t
         # Deflation of XX
@@ -225,7 +228,7 @@ def nopls1(XX, y, ncp=None):
         except:
             T[:, nc-1] = t
             C[0 ,nc-1] = c
-        yXXy = y.T.dot(XX).dot(y)
+        yXXy = y.T @ XX @ y
 
     T = np.delete(T, np.s_[nc:], 1)
     C = np.delete(C, np.s_[nc:], 1)
@@ -264,14 +267,14 @@ def nopls2(XX, YY, ncp=None, err_lim=1e-9, nloop_max=200, warning_tag=True):
             if nc < 2:
                 XX = diagonal_correction(XX, u, n)
 
-            t = XX.dot(u)
+            t = XX @ u
             t = t / np.sqrt(np.sum(t**2))
 
             # Applying the correction on the diagonal of YY
             if nc < 2:
                 YY = diagonal_correction(YY, t, n)
 
-            u_new = YY.dot(t)
+            u_new = YY @ t
             u_new = u_new/np.sqrt(np.sum(u_new**2))
 
             err = np.sum((u - u_new)**2)
@@ -280,14 +283,14 @@ def nopls2(XX, YY, ncp=None, err_lim=1e-9, nloop_max=200, warning_tag=True):
 
         if nloop < nloop_max or nc == 1:
             # Deflation of XX
-            pp = t.T.dot(XX).dot(t) / np.inner(t, t)
-            Xpt = XX.dot(np.outer(t, t)) / np.inner(t, t)
-            tpX = np.outer(t, t).dot(XX) / np.inner(t, t)
+            pp = t.T @ XX @ t / np.inner(t, t)
+            Xpt = XX @ np.outer(t, t) / np.inner(t, t)
+            tpX = np.outer(t, t) @ XX / np.inner(t, t)
             XX = XX - Xpt - tpX + pp * np.outer(t, t)
             # Deflation of YY
-            cc = t.T.dot(YY).dot(t) / np.inner(t, t)
-            Yct = YY.dot(np.outer(t, t)) / np.inner(t, t)
-            tcY = np.outer(t, t).dot(YY) / np.inner(t, t)
+            cc = t.T @ YY @ t / np.inner(t, t)
+            Yct = YY @ np.outer(t, t) / np.inner(t, t)
+            tcY = np.outer(t, t) @ YY / np.inner(t, t)
             YY = YY - Yct - tcY + cc * np.outer(t, t)
 
             try:
@@ -302,59 +305,14 @@ def nopls2(XX, YY, ncp=None, err_lim=1e-9, nloop_max=200, warning_tag=True):
                 U = np.delete(U, np.s_[nc:], 1)
                 if warning_tag:
                     warning = "Component " + str(nc) + " has not converged."
-                    print(warning)
                 break
         else:
             T = np.delete(T, np.s_[nc-1:], 1)
             U = np.delete(U, np.s_[nc-1:], 1)
-            warning = str(nc-1) + " components have converged."
-            if warning_tag:
-                print(warning)
             break
 
     return T, U, warning
 
-if __name__ == '__main__':
-    from simulation import simulateData
-    import preprocessing as prep
-
-    Xt, Z, Yt = simulateData(50, 3, 1000, 10., signalToNoise=100.0)
-    Xc, Xbar, Xstd = prep.scaling(Xt, 0)
-    Yc, Ybar, Ystd = prep.scaling(Yt, 0)
-    #Xc[0, 6] = np.nan
-
-    XX = Xc.dot(Xc.T)
-    print("Testing noPLS1...")
-    T, C = nopls1(XX, Yc[:, 0])
-    print(str(T.shape[1]) + " components fitted")
-    print(np.inner(T,T))
-    print()
-
-    print("Testing pls1")
-    T, P, W, c = pls1(Xc, Yc[:,0], 2)
-    print(T.shape)
-    print()
-
-    print("Testing noPLS2 with two column in Y...")
-    XX = Xc.dot(Xc.T)
-    YY = Yc[:, 0:2].dot(Yc[:, 0:2].T)
-    T, C, warning = nopls2(XX, YY)
-    print(str(T.shape[1]) + " components fitted")
-    print(T.shape)
-    print(T.T.dot(T))
-    print()
-
-    print("Testing noPLS2 with single Y...")
-    XX = Xc.dot(Xc.T)
-    YY = np.outer(Yc[:, 0], Yc[:, 0])
-    T, C, warning = nopls2(XX, YY)
-    print(str(T.shape[1]) + " components fitted")
-    print(T.T.dot(T))
-    print()
-
-    print("Testing pls2")
-    T, U, P, W, C = pls2(Xc, Yc[:, 0:2], 3)
-    print(T.shape)
 
 
 

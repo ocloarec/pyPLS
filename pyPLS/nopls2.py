@@ -51,14 +51,9 @@ class nopls2(_pls):
         _pls.__init__(self, X, Y, scaling=scaling)
 
         self.model = "nopls2"
-        missingValues = False
 
         self.err_lim = err_lim
         self.nloop_max = nloop_max
-
-        if self.missingValuesInX or self.missingValuesInY:
-            # TODO: For now nissing values in both are dealt the same way Improve this
-            missingValues = True
 
         if self.missingValuesInX:
             XX = nanmatprod(self.X, self.X.T)
@@ -104,6 +99,7 @@ class nopls2(_pls):
         self.R2Y, self.R2Ycol = self._calculateR2Y(self.Y, self.Yhat)
 
         if isinstance(cvfold, int) and cvfold > 0:
+            self.cvfold = cvfold
             self.Yhatcv = np.zeros((self.n, self.py))
             for i in np.arange(cvfold):
                 test = np.arange(i, self.n, cvfold)
@@ -126,6 +122,8 @@ class nopls2(_pls):
 
                 Tcv, Ucv, warning = _nopls2(XX, YY, ncp=ncp, err_lim=err_lim, nloop_max=nloop_max, warning_tag=False)
 
+
+
                 if self.missingValuesInX:
                     Pcv = nanmatprod(Xtrain.T, Tcv.dot(np.linalg.inv(Tcv.T.dot(Tcv))))
                 else:
@@ -143,7 +141,7 @@ class nopls2(_pls):
                 else:
                     self.Yhatcv[test,:] = Xtest.dot(Bcv)
 
-            self.R2Y, self.R2Ycol = self._calculateR2Y(self.Y, self.Yhat)
+            self.Q2Y, self.Q2Ycol = self._calculateR2Y(self.Y, self.Yhatcv)
 
         else:
             self.Q2Y = "NA"

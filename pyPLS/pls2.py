@@ -72,6 +72,7 @@ class pls2(_pls):
         self.R2Y, self.R2Ycol = self._calculateR2Y(self.Y, self.Yhat)
 
         if isinstance(cvfold, int) and cvfold > 0:
+            self.cvfold = cvfold
             self.Yhatcv = np.zeros((self.n, self.py))
             for i in np.arange(cvfold):
                 test = np.arange(i, self.n, cvfold)

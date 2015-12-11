@@ -10,8 +10,12 @@ class lvmodel(object):
         self.n = 0
         self.ncp = 0
         self.R2X = None
+        self.Q2Y = None
         self.model = "LV"
+        self.R2Ycol = []
+        self.Q2Ycol = []
 
+        self.warning = None
 
     def scores(self, n):
         if self.T is not None:
@@ -38,6 +42,7 @@ class _pls(lvmodel):
         self.B = None
         self.R2Y = None
         self.R2Ycol = None
+        self.cvfold = None
         # Checking if X and Y are valid
         X, nx, px = isValid(X)
         Y, ny, py = isValid(Y)
@@ -132,6 +137,7 @@ class _pls(lvmodel):
         missing_value_ratio_inX = missing_values_inX / (self.px*self.n)
         missing_values_inY = np.sum(np.isnan(self.Y))
         missing_value_ratio_inY = missing_values_inY / (self.py*self.n)
+        print("----------------------")
         print("Summary of input table")
         print("----------------------")
         print("Observations: " + str(self.n))
@@ -139,11 +145,13 @@ class _pls(lvmodel):
         print("Response Variables (Y): " + str(self.py))
         print("Missing values in X: " + str(missing_values_inX) + " (" + str(missing_value_ratio_inX) + "%)")
         print("Missing values in Y: " + str(missing_values_inY) + " (" + str(missing_value_ratio_inY) + "%)")
-        print()
+        print("---------------")
         print("Summary of PLS:")
         print("---------------")
         print("Fitted using " + self.model)
         print("Number of components: " + str(self.ncp))
+        if self.warning:
+            print("Warning: " + self.warning)
         if self.py > 1:
             print("Total explained variance in Y (R2Y): " + str(np.round(self.R2Y,3)))
             print("Determination coefficient by column in Y:")
@@ -152,9 +160,15 @@ class _pls(lvmodel):
         else:
             print("Determination coefficient (R2Y): " + str(np.round(self.R2Y,3)))
         print("Modeled variance in X: " + str(np.round(self.R2X,3)))
-        # for i, r2x in enumerate(self.R2X):
-        #     print("    - Component " + str(i+1) + " : " + str(np.round(r2x,3)*100)+ "%")
 
+        print("Cross-validation:")
+        print("Number of fold: " + str(self.cvfold))
+        print("Cumulative Q2Y: " + str(np.round(self.Q2Y,3)))
+
+        if self.py > 1:
+            print("Q2 by column in Y:")
+            for i, r2y in enumerate(self.Q2Ycol):
+                print("    - Column " + str(i+1) + " : " + str(np.round(r2y,3)))
 
 
 
