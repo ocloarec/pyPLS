@@ -236,7 +236,7 @@ def nopls1(XX, y, ncp=None):
     return T, C
 
 
-def nopls2(XX, YY, ncp=None, err_lim=1e-9, nloop_max=200, warning_tag=True):
+def nopls2(XX, YY, ncp=None, err_lim=1e-9, nloop_max=200, warning_tag=True, penalizeY=True):
     n = XX.shape[0]
     # Array initialisation
     if ncp is None:
@@ -271,7 +271,7 @@ def nopls2(XX, YY, ncp=None, err_lim=1e-9, nloop_max=200, warning_tag=True):
             t = t / np.sqrt(np.sum(t**2))
 
             # Applying the correction on the diagonal of YY
-            if nc < 2:
+            if nc < 2 and penalizeY:
                 YY = diagonal_correction(YY, t, n)
             u_new = YY @ t
             u_new = u_new/np.sqrt(np.sum(u_new**2))

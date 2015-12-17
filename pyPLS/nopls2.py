@@ -46,7 +46,7 @@ class nopls2(_pls):
                     new observation with the same number of variables tha X
                 return predicted Y
     """
-    def __init__(self, X, Y, cvfold=None, scaling=0, varMetadata=None, obsMetadata=None, ncp=None, err_lim=1e-9, nloop_max=200):
+    def __init__(self, X, Y, cvfold=None, scaling=0, ncp=None, err_lim=1e-9, nloop_max=200, penalizeY=True):
 
         _pls.__init__(self, X, Y, scaling=scaling)
 
@@ -74,7 +74,7 @@ class nopls2(_pls):
         if np.isnan(YY).any():
             raise ValueError("Calculation of YY' gives missing values!")
         #####################
-        self.T, self.U, self.warning = _nopls2(XX, YY, ncp=ncp, err_lim=err_lim, nloop_max=nloop_max)
+        self.T, self.U, self.warning = _nopls2(XX, YY, ncp=ncp, err_lim=err_lim, nloop_max=nloop_max, penalizeY=penalizeY)
         #####################
         # Deduction of the number of component fitted from the score array
         self.ncp = self.T.shape[1]
