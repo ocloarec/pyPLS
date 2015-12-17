@@ -50,7 +50,7 @@ class pls2(_pls):
                 return predicted Y
 
     """
-    def __init__(self, X, Y, a, cvfold=None, scaling=0, varMetadata=None, obsMetadata=None):
+    def __init__(self, X, Y, a, cvfold=None, scaling=0):
 
         _pls.__init__(self, X, Y, scaling=scaling)
 
@@ -72,6 +72,7 @@ class pls2(_pls):
         self.R2Y, self.R2Ycol = self._calculateR2Y(self.Y, self.Yhat)
 
         if isinstance(cvfold, int) and cvfold > 0:
+            self.cvfold = cvfold
             self.Yhatcv = np.zeros((self.n, self.py))
             for i in np.arange(cvfold):
                 test = np.arange(i, self.n, cvfold)

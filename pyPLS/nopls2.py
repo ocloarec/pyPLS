@@ -46,19 +46,14 @@ class nopls2(_pls):
                     new observation with the same number of variables tha X
                 return predicted Y
     """
-    def __init__(self, X, Y, cvfold=None, scaling=0, varMetadata=None, obsMetadata=None, ncp=None, err_lim=1e-9, nloop_max=200):
+    def __init__(self, X, Y, cvfold=None, scaling=0, ncp=None, err_lim=1e-9, nloop_max=200, penalizeY=True):
 
         _pls.__init__(self, X, Y, scaling=scaling)
 
         self.model = "nopls2"
-        missingValues = False
 
         self.err_lim = err_lim
         self.nloop_max = nloop_max
-
-        if self.missingValuesInX or self.missingValuesInY:
-            # TODO: For now nissing values in both are dealt the same way Improve this
-            missingValues = True
 
         if self.missingValuesInX:
             XX = nanmatprod(self.X, self.X.T)
@@ -79,7 +74,7 @@ class nopls2(_pls):
         if np.isnan(YY).any():
             raise ValueError("Calculation of YY' gives missing values!")
         #####################
-        self.T, self.U, self.warning = _nopls2(XX, YY, ncp=ncp, err_lim=err_lim, nloop_max=nloop_max)
+        self.T, self.U, self.warning = _nopls2(XX, YY, ncp=ncp, err_lim=err_lim, nloop_max=nloop_max, penalizeY=penalizeY)
         #####################
         # Deduction of the number of component fitted from the score array
         self.ncp = self.T.shape[1]
@@ -104,6 +99,7 @@ class nopls2(_pls):
         self.R2Y, self.R2Ycol = self._calculateR2Y(self.Y, self.Yhat)
 
         if isinstance(cvfold, int) and cvfold > 0:
+            self.cvfold = cvfold
             self.Yhatcv = np.zeros((self.n, self.py))
             for i in np.arange(cvfold):
                 test = np.arange(i, self.n, cvfold)
@@ -126,6 +122,8 @@ class nopls2(_pls):
 
                 Tcv, Ucv, warning = _nopls2(XX, YY, ncp=ncp, err_lim=err_lim, nloop_max=nloop_max, warning_tag=False)
 
+
+
                 if self.missingValuesInX:
                     Pcv = nanmatprod(Xtrain.T, Tcv.dot(np.linalg.inv(Tcv.T.dot(Tcv))))
                 else:
@@ -143,7 +141,7 @@ class nopls2(_pls):
                 else:
                     self.Yhatcv[test,:] = Xtest.dot(Bcv)
 
-            self.R2Y, self.R2Ycol = self._calculateR2Y(self.Y, self.Yhat)
+            self.Q2Y, self.Q2Ycol = self._calculateR2Y(self.Y, self.Yhatcv)
 
         else:
             self.Q2Y = "NA"
