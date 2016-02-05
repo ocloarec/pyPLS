@@ -6,6 +6,10 @@ def scaling(X, scale, axis=0):
     Scale the array using the provided scaling factor
 
     """
+
+    if X.dtype == object:
+        X = np.asarray(X, dtype=np.float64)
+
     was_matrix = False
     if type(X) == np.matrix:
         X = np.asarray(X)

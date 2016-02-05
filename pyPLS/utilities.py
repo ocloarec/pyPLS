@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-
+from .preprocessing import scaling
 def nanmatprod(ma, mb):
     """
     Compute matrix product of a and b in cas there is missing values.
@@ -92,9 +92,13 @@ def isValid(X, forPrediction=False):
     # If X is a Pandas DataFrame
     if isinstance(X, pd.DataFrame):
         X = X.as_matrix()
+        if X.dtype == object:
+            X = np.asarray(X, dtype=np.float64)
 
     if type(X) == pd.Series:
         X = X.as_matrix()
+        if X.dtype == object:
+            X = np.asarray(X, dtype=np.float64)
 
     if isinstance(X, list):
         try:
@@ -121,6 +125,19 @@ def isValid(X, forPrediction=False):
         raise ValueError("X must be an array like object")
 
     return X, n, p
+
+def corr(X,Y):
+    X, nx, px = isValid(X)
+    Y, ny, py = isValid(Y)
+    X, Xbar, Sx = scaling(X,1)
+    Y, Ybar, Sy = scaling(Y,1)
+
+    if nx == ny:
+        return X.T @ Y / (nx - 1)
+    else:
+        raise ValueError("X and Y must have the same number of rows.")
+
+
 
 if __name__ == '__main__':
     a = np.random.randn(30, 20)
