@@ -29,6 +29,8 @@ def pqn(X, reference=None, sigma=1e-14):
         columns = X.columns
         idx = X.index
         X = X.as_matrix()
+        if X.dtype == object:
+            X = np.asarray(X, dtype=np.float64)
 
 
     n = X.shape[0]
@@ -42,6 +44,9 @@ def pqn(X, reference=None, sigma=1e-14):
     mask = reference > sigma
     Quot = X[:, mask]/np.tile(reference[mask], (n, 1))
     factors = np.median(Quot, axis=1)
+
+    for i, f in enumerate(factors):
+        X[i,:] = X[i,:] * f
 
     if isDataFrame:
         X = pd.DataFrame(X, index=idx, columns=columns)
