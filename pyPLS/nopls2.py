@@ -63,18 +63,18 @@ class nopls2(_pls):
         if np.isnan(XX).any():
             raise ValueError("Calculation of XX' gives missing values!")
 
-        if self.missingValuesInY:
-            YY = nanmatprod(self.Y, self.Y.T)
-        else:
-            if self.py > 1:
-                YY = self.Y.dot(self.Y.T)
-            else:
-                YY = np.outer(self.Y, self.Y)
+        # if self.missingValuesInY:
+        #     YY = nanmatprod(self.Y, self.Y.T)
+        # else:
+        #     if self.py > 1:
+        #         YY = self.Y.dot(self.Y.T)
+        #     else:
+        #         YY = np.outer(self.Y, self.Y)
 
-        if np.isnan(YY).any():
-            raise ValueError("Calculation of YY' gives missing values!")
+        # if np.isnan(YY).any():
+        #     raise ValueError("Calculation of YY' gives missing values!")
         #####################
-        self.T, self.U, self.warning = _nopls2(XX, YY, ncp=ncp, err_lim=err_lim, nloop_max=nloop_max, penalizeY=penalizeY)
+        self.T, self.U, self.C, self.warning = _nopls2(XX, self.Y, ncp=ncp, err_lim=err_lim, nloop_max=nloop_max, penalizeY=penalizeY)
         #####################
         # Deduction of the number of component fitted from the score array
         self.ncp = self.T.shape[1]
@@ -84,17 +84,23 @@ class nopls2(_pls):
         else:
             self.P = self.X.T.dot(self.T).dot(np.linalg.inv(self.T.T.dot(self.T)))
 
-        if self.missingValuesInY:
-            self.C = nanmatprod(self.Y.T, self.T.dot(np.linalg.inv(self.T.T.dot(self.T))))
-        else:
-            self.C = self.Y.T.dot(self.T).dot(np.linalg.inv(self.T.T.dot(self.T)))
+        # if self.missingValuesInY:
+        #     self.C = nanmatprod(self.Y.T, self.T.dot(np.linalg.inv(self.T.T.dot(self.T))))
+        # else:
+        #     self.C = self.Y.T.dot(self.T).dot(np.linalg.inv(self.T.T.dot(self.T)))
 
         # Regression coefficient and model prediction
         self.B = self.P.dot(np.linalg.inv(self.P.T.dot(self.P))).dot(self.C.T)
+        if self.B.ndim < 2:
+            self.B = np.expand_dims(self.B, axis=1)
+
         if self.missingValuesInX:
             self.Yhat = nanmatprod(self.X, self.B)
         else:
             self.Yhat = self.X.dot(self.B)
+
+        print(self.C.shape)
+
 
         self.R2Y, self.R2Ycol = self._calculateR2Y(self.Y, self.Yhat)
 
@@ -112,15 +118,15 @@ class nopls2(_pls):
                 else:
                     XX = Xtrain.dot(Xtrain.T)
 
-                if self.missingValuesInY:
-                    YY = nanmatprod(Ytrain, Ytrain.T)
-                else:
-                    if self.py > 1:
-                        YY = Ytrain.dot(Ytrain.T)
-                    else:
-                        YY = np.outer(Ytrain, Ytrain)
+                # if self.missingValuesInY:
+                #     YY = nanmatprod(Ytrain, Ytrain.T)
+                # else:
+                #     if self.py > 1:
+                #         YY = Ytrain.dot(Ytrain.T)
+                #     else:
+                #         YY = np.outer(Ytrain, Ytrain)
 
-                Tcv, Ucv, warning = _nopls2(XX, YY, ncp=ncp, err_lim=err_lim, nloop_max=nloop_max, warning_tag=False)
+                Tcv, Ucv, Ccv, warning = _nopls2(XX, Ytrain, ncp=ncp, err_lim=err_lim, nloop_max=nloop_max, warning_tag=False)
 
 
 
@@ -129,13 +135,14 @@ class nopls2(_pls):
                 else:
                     Pcv = Xtrain.T.dot(Tcv).dot(np.linalg.inv(Tcv.T.dot(Tcv)))
 
-                if self.missingValuesInY:
-                    Ccv = nanmatprod(Ytrain.T, Tcv.dot(np.linalg.inv(Tcv.T.dot(Tcv))))
-                else:
-                    Ccv = Ytrain.T.dot(Tcv).dot(np.linalg.inv(Tcv.T.dot(Tcv)))
+                # if self.missingValuesInY:
+                #     Ccv = nanmatprod(Ytrain.T, Tcv.dot(np.linalg.inv(Tcv.T.dot(Tcv))))
+                # else:
+                #     Ccv = Ytrain.T.dot(Tcv).dot(np.linalg.inv(Tcv.T.dot(Tcv)))
 
                 Bcv = Pcv.dot(np.linalg.inv(Pcv.T.dot(Pcv))).dot(Ccv.T)
-
+                if Bcv.ndim < 2:
+                    Bcv = np.expand_dims(Bcv, axis=1)
                 if self.missingValuesInX:
                     self.Yhatcv[test,:] = nanmatprod(Xtest, Bcv)
                 else:

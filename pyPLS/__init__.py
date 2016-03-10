@@ -4,6 +4,6 @@ from .pls1 import pls1
 from .pls2 import pls2
 from .pca import prcomp as pca
 from .normalisation import unit, pqn
-
+from .preprocessing import scaling
 from .simulation import simulateData
 from .utilities import corr

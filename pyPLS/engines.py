@@ -175,29 +175,30 @@ def pls2(X, Y, a, missing_values=False, err_lim=0.00001):
     return T, U, P, W, C
 
 
-def diagonal_correction(ZZ, v, n):
+def diagonal_correction(K, v):
+    n = K.shape[0]
     correction = np.zeros((n, n))
     H = (np.eye(n) - np.ones((n, n), dtype=float)/n)
-    for i, zz in enumerate(ZZ):
-        zzw = np.delete(zz, i)
-        zzwc = zzw - np.mean(zzw)
+    for i, k in enumerate(K):
+        kw = np.delete(k, i)
+        kwc = kw - np.mean(kw)
         vw = np.delete(v, i)
-        a = np.inner(zzwc, vw)/np.sum(vw**2)
-        b = np.mean(zzw) - a * np.mean(vw)
-        zzihat = v[i]*a + b
-        correction[i, i] = zz[i] - zzihat
+        a = np.inner(kwc, vw)/np.sum(vw**2)
+        b = np.mean(kw) - a * np.mean(vw)
+        kihat = v[i]*a + b
+        correction[i, i] = k[i] - kihat
 
-    ZZ = ZZ - correction
+    K = K - correction
     # ZZ is then recentred
-    ZZ = H.T @ ZZ @ H
-    return ZZ
+    K = H.T @ K @ H
+    return K
 
 
 def nopls1(XX, y, ncp=None):
 
     n = XX.shape[0]
     # Array initialisation
-    XX = diagonal_correction(XX, y, n)
+    XX = diagonal_correction(XX, y)
     if not ncp:
         ncp = np.linalg.matrix_rank(XX)
         yXXylim = 0
@@ -236,27 +237,20 @@ def nopls1(XX, y, ncp=None):
     return T, C
 
 
-def nopls2(XX, YY, ncp=None, err_lim=1e-9, nloop_max=200, warning_tag=True, penalizeY=True):
-    n = XX.shape[0]
+def nopls2(K, Y, ncp=None, err_lim=1e-9, nloop_max=200, warning_tag=True, penalizeY=True):
+    n = K.shape[0]
+    py = Y.shape[1]
     # Array initialisation
     if ncp is None:
-        ncp = np.linalg.matrix_rank(XX)
+        ncp = np.linalg.matrix_rank(K)
     T = np.zeros((n,ncp))
     U = np.zeros((n,ncp))
+    C = np.zeros((py,ncp))
     # Not true for n < py but it is used to know if we have single or multi Y
-    py = np.linalg.matrix_rank(YY)
 
     nc = 0
-    uXXu = 1.
 
-    u = YY[:,0]
-
-    if not ncp:
-        ncp = np.inf
-        uXXulim = 0
-    else:
-        uXXulim = -np.inf
-
+    u = Y[:,0]
     nloop = 0
     warning = None
     while nc < ncp:
@@ -265,15 +259,17 @@ def nopls2(XX, YY, ncp=None, err_lim=1e-9, nloop_max=200, warning_tag=True, pena
         while err > err_lim and nloop < nloop_max:
             # Applying the correction on the diagonal of XX
             if nc < 2:
-                XX = diagonal_correction(XX, u, n)
+                K = diagonal_correction(K, u)
 
-            t = XX @ u
+            t = K @ u
             t = t / np.sqrt(np.sum(t**2))
 
+            c = Y.T @ t
+
             # Applying the correction on the diagonal of YY
-            if nc < 2 and penalizeY:
-                YY = diagonal_correction(YY, t, n)
-            u_new = YY @ t
+            # if nc < 2 and penalizeY:
+            #     YY = diagonal_correction(YY, t)
+            u_new = Y @ c
             u_new = u_new/np.sqrt(np.sum(u_new**2))
 
             err = np.sum((u - u_new)**2)
@@ -282,35 +278,41 @@ def nopls2(XX, YY, ncp=None, err_lim=1e-9, nloop_max=200, warning_tag=True, pena
 
         if nloop < nloop_max or nc == 1:
             # Deflation of XX
-            pp = t.T @ XX @ t / np.inner(t, t)
-            Xpt = XX @ np.outer(t, t) / np.inner(t, t)
-            tpX = np.outer(t, t) @ XX / np.inner(t, t)
-            XX = XX - Xpt - tpX + pp * np.outer(t, t)
+            # pp = t.T @ XX @ t / np.inner(t, t)
+            # Xpt = XX @ np.outer(t, t) / np.inner(t, t)
+            # tpX = np.outer(t, t) @ XX / np.inner(t, t)
+            # XX = XX - Xpt - tpX + pp * np.outer(t, t)
+            K = K - np.outer(t, t) @ K - K @ np.outer(t, t) + np.outer(t, t) @ K @ np.outer(t, t)
             # Deflation of YY
-            cc = t.T @ YY @ t / np.inner(t, t)
-            Yct = YY @ np.outer(t, t) / np.inner(t, t)
-            tcY = np.outer(t, t) @ YY / np.inner(t, t)
-            YY = YY - Yct - tcY + cc * np.outer(t, t)
+            # cc = t.T @ YY @ t / np.inner(t, t)
+            # Yct = YY @ np.outer(t, t) / np.inner(t, t)
+            # tcY = np.outer(t, t) @ YY / np.inner(t, t)
+            Y = Y - np.outer(t, t) @ Y
 
             try:
                 T[:, nc-1] = t[:, 0]
                 U[:, nc-1] = u[:, 0]
+                C[:, nc-1] = c
             except:
                 T[:, nc-1] = t
                 U[:, nc-1] = u
+                C[:, nc-1] = c
 
             if nloop >= nloop_max:
                 T = np.delete(T, np.s_[nc:], 1)
                 U = np.delete(U, np.s_[nc:], 1)
+                C = np.delete(C, np.s_[nc:], 1)
                 if warning_tag:
                     warning = "Component " + str(nc) + " has not converged."
                 break
         else:
             T = np.delete(T, np.s_[nc-1:], 1)
             U = np.delete(U, np.s_[nc-1:], 1)
+            C = np.delete(C, np.s_[nc-1:], 1)
+
             break
 
-    return T, U, warning
+    return T, U, C, warning
 
 
 
