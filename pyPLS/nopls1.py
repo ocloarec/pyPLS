@@ -111,9 +111,11 @@ class nopls1(_pls):
                     Pcv = Xtrain.T.dot(Tcv).dot(np.linalg.inv(Tcv.T.dot(Tcv)))
 
                 Bcv = Pcv.dot(np.linalg.inv(Pcv.T.dot(Pcv))).dot(Ccv.T)
+                self.Bcv.append(Bcv[:,0])
                 self.Yhatcv[test,:] = Xtest.dot(Bcv)
 
             self.Q2Y, self.Q2Ycol = self._calculateR2Y(self.Y, self.Yhatcv)
+            self.Bcv = np.asarray(self.Bcv)
         else:
             self.Q2Y = "NA"
 

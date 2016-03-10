@@ -39,7 +39,7 @@ class prcomp(lvmodel):
 
     """
 
-    def __init__(self, X, a, scaling=0):
+    def __init__(self, X, a, scaling=0, center=True):
 
         lvmodel.__init__(self)
         self.model = "pca"
@@ -47,7 +47,9 @@ class prcomp(lvmodel):
         X, self.n, self.p = isValid(X)
 
         if type(X) == np.ndarray:
-            X, self.Xbar, self.Xstd = preprocessing.scaling(X, scaling)
+
+            X, self.Xbar, self.Xstd = preprocessing.scaling(X, scaling, center=center)
+
             self.T, self.P, self.E, self.R2X = _pca(X, a)
             self.ncp = a
             self.cumR2X = np.sum(self.R2X)
