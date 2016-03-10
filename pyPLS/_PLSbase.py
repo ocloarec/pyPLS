@@ -28,7 +28,10 @@ class lvmodel(object):
 
     def loadings(self, n):
         if self.P is not None:
-            return np.asarray(self.P[:, n-1])
+            if n >= 1:
+                return np.asarray(self.P[:, n-1])
+            else:
+                return None
         else:
             return None
 
@@ -40,6 +43,7 @@ class _pls(lvmodel):
         # Adding weights
         self.W = None
         self.B = None
+        self.Bcv = list()
         self.R2Y = None
         self.R2Ycol = None
         self.cvfold = None

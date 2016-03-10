@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def scaling(X, scale, axis=0):
+def scaling(X, scale, center=True, axis=0):
     """
     Scale the array using the provided scaling factor
 
@@ -26,7 +26,9 @@ def scaling(X, scale, axis=0):
     else:
         Xbar = X.mean(axis=axis)
         Sx = X.std(axis=axis)
-    X = X - Xbar
+
+    if center:
+        X = X - Xbar
 
     X = X / (Sx**scale)
     if was_matrix:

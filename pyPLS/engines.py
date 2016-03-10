@@ -99,7 +99,7 @@ def pls1(X, y, a, missing_values=False):
     for i in np.arange(a):
         if missing_values:
             w = nanmatprod(X.T, y)
-            w = w / np.sqrt(w.T * w)
+            w = w / np.sqrt(np.sum(w * w))
             t = nanmatprod(X, w)
             p = nanmatprod(X.T, t) / np.sum(t * t)
         else:
