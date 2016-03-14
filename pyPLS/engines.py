@@ -4,23 +4,6 @@ from .utilities import nanmatprod
 ELIM = 1e-12
 
 
-def foo(r, X, Y):
-    X = np.asarray(X)
-    Y = np.asarray(Y)
-    XX = X @ X.T
-    n, p = XX.shape
-    H = (np.eye(n) - np.ones((n, n), dtype=float)/n)
-    diagXX = np.mean(np.diag(XX))
-    XX -= diagXX * r * np.identity(n)
-    XX = H.T @ XX @ H
-    Yproj = XX @ Y
-    return np.sum(Yproj * Y, 0)
-
-
-def foo2(r, X, Y):
-    return np.abs(np.mean(foo(r, X, Y)))
-
-
 def pca(X, a):
     if isinstance(X, np.ndarray):
         # try:
