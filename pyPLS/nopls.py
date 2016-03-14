@@ -2,10 +2,11 @@ from __future__ import print_function
 import numpy as np
 from ._PLSbase import _pls
 from .utilities import nanmatprod
-from .engines import nopls2 as _nopls2
+from .engines import kpls as _kpls, diagonal_correction
 
+IMPLEMENTED_KERNEL = ["linear"]
 
-class nopls2(_pls):
+class nopls(_pls):
     """
         This is the multivariate noPLS algorithm.
         Parameters:
@@ -46,63 +47,59 @@ class nopls2(_pls):
                     new observation with the same number of variables tha X
                 return predicted Y
     """
-    def __init__(self, X, Y, cvfold=None, scaling=0, ncp=None, err_lim=1e-9, nloop_max=200, penalizeY=True):
+    def __init__(self, X, Y, kernel="linear", auto_penalisation=True, cvfold=None, scaling=0, ncp=None, err_lim=1e-9, nloop_max=200):
 
         _pls.__init__(self, X, Y, scaling=scaling)
 
-        self.model = "nopls2"
-
+        self.model = "nopls"
         self.err_lim = err_lim
         self.nloop_max = nloop_max
+        assert kernel in IMPLEMENTED_KERNEL, "Kernel not supported!"
 
-        if self.missingValuesInX:
-            XX = nanmatprod(self.X, self.X.T)
+        if kernel == "linear":
+            if self.missingValuesInX:
+                self.K = nanmatprod(self.X, self.X.T)
+            else:
+                self.K = self.X.dot(self.X.T)
         else:
-            XX = self.X.dot(self.X.T)
+            self.K = None
 
-        if np.isnan(XX).any():
-            raise ValueError("Calculation of XX' gives missing values!")
+        assert not np.isnan(self.K).any(), "Kernel calculation lead to missing values!"
 
-        # if self.missingValuesInY:
-        #     YY = nanmatprod(self.Y, self.Y.T)
-        # else:
-        #     if self.py > 1:
-        #         YY = self.Y.dot(self.Y.T)
-        #     else:
-        #         YY = np.outer(self.Y, self.Y)
+        if self.missingValuesInY:
+            YY = nanmatprod(self.Y, self.Y.T)
+        else:
+            if self.py > 1:
+                YY = self.Y.dot(self.Y.T)
+            else:
+                YY = np.outer(self.Y, self.Y)
 
-        # if np.isnan(YY).any():
-        #     raise ValueError("Calculation of YY' gives missing values!")
+        assert not np.isnan(YY).any(), "A row of Y contains only missing values!"
+
         #####################
-        self.T, self.U, self.C, self.warning = _nopls2(XX, self.Y, ncp=ncp, err_lim=err_lim, nloop_max=nloop_max, penalizeY=penalizeY)
+        self.T, self.U, self.C, self.Kcorr, self.warning = _kpls(self.K, self.Y, auto_penalization=True, ncp=ncp, err_lim=err_lim, nloop_max=nloop_max)
         #####################
         # Deduction of the number of component fitted from the score array
+
         self.ncp = self.T.shape[1]
 
-        if self.missingValuesInX:
-            self.P = nanmatprod(self.X.T, self.T.dot(np.linalg.inv(self.T.T.dot(self.T))))
+        if kernel == "linear":
+            if self.missingValuesInX:
+                self.P = nanmatprod(self.X.T, self.T.dot(np.linalg.inv(self.T.T.dot(self.T))))
+            else:
+                self.P = self.X.T.dot(self.T).dot(np.linalg.inv(self.T.T.dot(self.T)))
+
+            # Regression coefficient and model prediction
+            self.B = self.X.T @ self.U @ np.linalg.inv(self.T.T @ self.Kcorr @ self.U) @ self.T.T @ self.Y
+            if self.B.ndim < 2:
+                self.B = np.expand_dims(self.B, axis=1)
         else:
-            self.P = self.X.T.dot(self.T).dot(np.linalg.inv(self.T.T.dot(self.T)))
+            self.P = None
+            self.B = None
 
-        # if self.missingValuesInY:
-        #     self.C = nanmatprod(self.Y.T, self.T.dot(np.linalg.inv(self.T.T.dot(self.T))))
-        # else:
-        #     self.C = self.Y.T.dot(self.T).dot(np.linalg.inv(self.T.T.dot(self.T)))
-
-        # Regression coefficient and model prediction
-        self.B = self.P.dot(np.linalg.inv(self.P.T.dot(self.P))).dot(self.C.T)
-        if self.B.ndim < 2:
-            self.B = np.expand_dims(self.B, axis=1)
-
-        if self.missingValuesInX:
-            self.Yhat = nanmatprod(self.X, self.B)
-        else:
-            self.Yhat = self.X.dot(self.B)
-
-        print(self.C.shape)
-
-
+        self.Yhat = self.T @ self.T.T @ self.Y
         self.R2Y, self.R2Ycol = self._calculateR2Y(self.Y, self.Yhat)
+        # self.R2Y_dev, self.R2Y_devcol = self._calculateR2Y(self.Y, self.Yhat_dev)
 
         if isinstance(cvfold, int) and cvfold > 0:
             self.cvfold = cvfold
@@ -126,9 +123,7 @@ class nopls2(_pls):
                 #     else:
                 #         YY = np.outer(Ytrain, Ytrain)
 
-                Tcv, Ucv, Ccv, warning = _nopls2(XX, Ytrain, ncp=ncp, err_lim=err_lim, nloop_max=nloop_max, warning_tag=False)
-
-
+                Tcv, Ucv, Ccv, Kcorrcv, warning = _kpls(XX, Ytrain, auto_penalization=True, ncp=ncp, err_lim=err_lim, nloop_max=nloop_max, warning_tag=False)
 
                 if self.missingValuesInX:
                     Pcv = nanmatprod(Xtrain.T, Tcv.dot(np.linalg.inv(Tcv.T.dot(Tcv))))

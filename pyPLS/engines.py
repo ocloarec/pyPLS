@@ -89,36 +89,7 @@ def nipals(X, a):
     return T, P, X
 
 
-def pls1(X, y, a, missing_values=False):
-    n, p = X.shape
-    c = np.zeros(a)
-    T = np.zeros((n, a))
-    P = np.zeros((p, a))
-    W = np.zeros((p, a))
-
-    for i in np.arange(a):
-        if missing_values:
-            w = nanmatprod(X.T, y)
-            w = w / np.sqrt(np.sum(w * w))
-            t = nanmatprod(X, w)
-            p = nanmatprod(X.T, t) / np.sum(t * t)
-        else:
-            w = X.T @ y
-            w = w / np.sqrt(np.sum(w * w))
-            t = X @ w
-            p = X.T @ t / np.sum(t * t)
-
-        X = X - np.outer(t, p)
-        c[i] = y.T @ t / np.sum(t * t)
-        y = y - c[i]*t
-        T[:, i] = t[:,0]
-        P[:, i] = p[:,0]
-        W[:, i] = w[:,0]
-
-    return T, P, W, c
-
-
-def pls2(X, Y, a, missing_values=False, err_lim=0.00001):
+def pls(X, Y, a, missing_values=False, err_lim=0.00001):
     n, px = X.shape
     try:
         n, py = Y.shape
@@ -183,7 +154,8 @@ def diagonal_correction(K, v):
         kw = np.delete(k, i)
         kwc = kw - np.mean(kw)
         vw = np.delete(v, i)
-        a = np.inner(kwc, vw)/np.sum(vw**2)
+        vwc = vw - np.mean(vw)
+        a = np.inner(kwc, vw)/np.sum(vwc**2)
         b = np.mean(kw) - a * np.mean(vw)
         kihat = v[i]*a + b
         correction[i, i] = k[i] - kihat
@@ -194,50 +166,7 @@ def diagonal_correction(K, v):
     return K
 
 
-def nopls1(XX, y, ncp=None):
-
-    n = XX.shape[0]
-    # Array initialisation
-    XX = diagonal_correction(XX, y)
-    if not ncp:
-        ncp = np.linalg.matrix_rank(XX)
-        yXXylim = 0
-    else:
-        yXXylim = -np.inf
-
-    T = np.zeros((n, ncp))
-    C = np.zeros((1, ncp))
-
-    nc = 0
-    yXXy = 1.
-
-    while yXXy > yXXylim and nc < ncp:
-        nc += 1
-        t = XX @ y
-        t = t/np.sqrt(np.sum(t**2))
-        c = y.T @ t
-        pp = t.T @ XX @ t
-        Xpt = XX @ np.outer(t, t)
-        tpX = np.outer(t, t) @ XX
-        # Deflation of y
-        y = y - c * t
-        # Deflation of XX
-        XX = XX - Xpt - tpX + pp * np.outer(t, t)
-        try:
-            T[:, nc-1] = t[:, 0]
-            C[0, nc-1] = c[0]
-        except:
-            T[:, nc-1] = t
-            C[0 ,nc-1] = c
-        yXXy = y.T @ XX @ y
-
-    T = np.delete(T, np.s_[nc:], 1)
-    C = np.delete(C, np.s_[nc:], 1)
-
-    return T, C
-
-
-def nopls2(K, Y, ncp=None, err_lim=1e-9, nloop_max=200, warning_tag=True, penalizeY=True):
+def kpls(K, Y, ncp=None, auto_penalization=False, err_lim=1e-9, nloop_max=200, warning_tag=True):
     n = K.shape[0]
     py = Y.shape[1]
     # Array initialisation
@@ -246,10 +175,7 @@ def nopls2(K, Y, ncp=None, err_lim=1e-9, nloop_max=200, warning_tag=True, penali
     T = np.zeros((n,ncp))
     U = np.zeros((n,ncp))
     C = np.zeros((py,ncp))
-    # Not true for n < py but it is used to know if we have single or multi Y
-
     nc = 0
-
     u = Y[:,0]
     nloop = 0
     warning = None
@@ -257,36 +183,22 @@ def nopls2(K, Y, ncp=None, err_lim=1e-9, nloop_max=200, warning_tag=True, penali
         nc += 1
         err = np.inf
         while err > err_lim and nloop < nloop_max:
-            # Applying the correction on the diagonal of XX
             if nc < 2:
-                K = diagonal_correction(K, u)
-
+                if auto_penalization:
+                    K = diagonal_correction(K, u)
+                    Kcorr = K
             t = K @ u
             t = t / np.sqrt(np.sum(t**2))
-
             c = Y.T @ t
-
-            # Applying the correction on the diagonal of YY
-            # if nc < 2 and penalizeY:
-            #     YY = diagonal_correction(YY, t)
             u_new = Y @ c
             u_new = u_new/np.sqrt(np.sum(u_new**2))
-
             err = np.sum((u - u_new)**2)
             u = u_new
             nloop += 1
 
         if nloop < nloop_max or nc == 1:
-            # Deflation of XX
-            # pp = t.T @ XX @ t / np.inner(t, t)
-            # Xpt = XX @ np.outer(t, t) / np.inner(t, t)
-            # tpX = np.outer(t, t) @ XX / np.inner(t, t)
-            # XX = XX - Xpt - tpX + pp * np.outer(t, t)
+            # Deflation of K and Y
             K = K - np.outer(t, t) @ K - K @ np.outer(t, t) + np.outer(t, t) @ K @ np.outer(t, t)
-            # Deflation of YY
-            # cc = t.T @ YY @ t / np.inner(t, t)
-            # Yct = YY @ np.outer(t, t) / np.inner(t, t)
-            # tcY = np.outer(t, t) @ YY / np.inner(t, t)
             Y = Y - np.outer(t, t) @ Y
 
             try:
@@ -312,7 +224,7 @@ def nopls2(K, Y, ncp=None, err_lim=1e-9, nloop_max=200, warning_tag=True, penali
 
             break
 
-    return T, U, C, warning
+    return T, U, C, Kcorr, warning
 
 
 

@@ -1,11 +1,11 @@
 from __future__ import print_function
 import numpy as np
-from ._PLSbase import _pls
+from ._PLSbase import _pls as pls_base
 from .utilities import nanmatprod
-from .engines import pls2 as _pls2
+from .engines import pls as _pls
 
 
-class pls2(_pls):
+class pls(pls_base):
     """
     This is the classic multivariate NIPALS PLS algorithm.
     Parameters:
@@ -52,15 +52,15 @@ class pls2(_pls):
     """
     def __init__(self, X, Y, a, cvfold=None, scaling=0):
 
-        _pls.__init__(self, X, Y, scaling=scaling)
+        pls_base.__init__(self, X, Y, scaling=scaling)
 
-        self.model = "pls2"
+        self.model = "pls"
         self.ncp = a
         missingValues = False
         if self.missingValuesInX or self.missingValuesInY:
             # TODO: For now nissing values in both are dealt the same way Improve this
             missingValues = True
-        self.T, self.U, self.P, self.W, self.C = _pls2(self.X, self.Y, a, missing_values=missingValues)
+        self.T, self.U, self.P, self.W, self.C = _pls(self.X, self.Y, a, missing_values=missingValues)
 
         # Regression coefficient and model prediction
         self.B = self.W.dot(np.linalg.inv(self.P.T.dot(self.P))).dot(self.C.T)
@@ -79,7 +79,7 @@ class pls2(_pls):
                 Xtest = self.X[test, :]
                 Xtrain = np.delete(self.X, test, axis=0)
                 ytrain = np.delete(self.Y, test, axis=0)
-                Tcv, Ucv, Pcv, Wcv, Ccv = _pls2(Xtrain, ytrain, a, missing_values=missingValues)
+                Tcv, Ucv, Pcv, Wcv, Ccv = _pls(Xtrain, ytrain, a, missing_values=missingValues)
                 Bcv = Wcv.dot(np.linalg.inv(Pcv.T.dot(Pcv))).dot(Ccv.T)
                 if missingValues:
                     self.Yhatcv[test, :] = nanmatprod(Xtest, Bcv)

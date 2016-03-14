@@ -158,6 +158,7 @@ class _pls(lvmodel):
             print("Warning: " + self.warning)
         if self.py > 1:
             print("Total explained variance in Y (R2Y): " + str(np.round(self.R2Y,3)))
+            print("Total explained variance in Y (R2Y) - dev: " + str(np.round(self.R2Y_dev,3)))
             print("Determination coefficient by column in Y:")
             for i, r2y in enumerate(self.R2Ycol):
                 print("    - Column " + str(i+1) + " : " + str(np.round(r2y,3)))
