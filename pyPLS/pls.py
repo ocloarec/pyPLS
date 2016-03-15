@@ -1,6 +1,6 @@
 from __future__ import print_function
 import numpy as np
-from ._PLSbase import _pls as pls_base
+from ._PLSbase import plsbase as pls_base
 from .utilities import nanmatprod
 from .engines import pls as _pls
 
