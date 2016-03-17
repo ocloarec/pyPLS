@@ -39,17 +39,19 @@ class lvmodel(object):
 
 
 class plsbase(lvmodel):
-    def __init__(self, X, Y, scaling=0, statistics=True):
+    def __init__(self, X, Y, ncp=None, scaling=0, statistics=True):
         lvmodel.__init__(self)
 
         # Adding weights
         self.W = None
         self.B = None
         self.Bk = None
-        self.Bcv = list()
+        self.Bcv = None
         self.R2Y = None
         self.R2Ycol = None
         self.cvfold = None
+        self.Yhatcv = None
+        self.penalization = "NA"
         # Checking if X and Y are valid
         X, nx, px = isValid(X)
         Y, ny, py = isValid(Y)
@@ -98,13 +100,38 @@ class plsbase(lvmodel):
         self.px = px
         self.py = py
 
+
+
     def weights(self, n):
         if self.W is not None:
             return np.array(self.W[:, n-1])
         else:
             return None
 
-    def predict(self, Xnew, preprocessing=True, kernel=None):
+    def cross_validation(self,  **kwargs):
+        if isinstance(self.cvfold, int) and self.cvfold > 0:
+            self.Bcv = np.zeros((self.px,self.py, self.cvfold))
+            self.Yhatcv = np.zeros((self.n, self.py))
+            for i in np.arange(self.cvfold):
+                test = np.arange(i, self.n, self.cvfold)
+                Xtest = self.X[test, :]
+                Xtrain = np.delete(self.X, test, axis=0)
+                Ytrain = np.delete(self.Y, test, axis=0)
+                plscv = self.__class__(Xtrain, Ytrain, **kwargs)
+
+                self.Bcv[:, :, i] = plscv.B
+                self.Yhatcv[test,:] = plscv.predict(Xtest, preprocessing=False, **kwargs)
+
+            self.Q2Y, self.Q2Ycol = self._calculateR2Y(self.Yhatcv)
+        else:
+            self.Q2Y = None
+            self.Q2Ycol = None
+
+    def predict(self, Xnew, preprocessing=True, **kwargs):
+
+        for key, value in kwargs.items():
+            if key == "kernel":
+                kernel = value
 
         Xnew, nnew, pxnew = isValid(Xnew, forPrediction=True)
         if preprocessing:
@@ -173,6 +200,10 @@ class plsbase(lvmodel):
         print("Summary of PLS:")
         print("---------------")
         print("Fitted using " + self.model)
+        try:
+            print("Penalisation: " + str(self.penalization))
+        except:
+            pass
         print("Number of components: " + str(self.ncp))
         if self.warning:
             print("Warning: " + self.warning)
@@ -185,15 +216,15 @@ class plsbase(lvmodel):
             print("Determination coefficient (R2Y): " + str(np.round(self.R2Y,3)))
         if self.R2X:
             print("Modeled variance in X: " + str(np.round(self.R2X,3)))
+        if self.Q2Y:
+            print("Cross-validation:")
+            print("Number of fold: " + str(self.cvfold))
+            print("Cumulative Q2Y: " + str(np.round(self.Q2Y,3)))
 
-        print("Cross-validation:")
-        print("Number of fold: " + str(self.cvfold))
-        print("Cumulative Q2Y: " + str(np.round(self.Q2Y,3)))
-
-        if self.py > 1:
-            print("Q2 by column in Y:")
-            for i, r2y in enumerate(self.Q2Ycol):
-                print("    - Column " + str(i+1) + " : " + str(np.round(r2y,3)))
+            if self.py > 1:
+                print("Q2 by column in Y:")
+                for i, r2y in enumerate(self.Q2Ycol):
+                    print("    - Column " + str(i+1) + " : " + str(np.round(r2y,3)))
 
 
 

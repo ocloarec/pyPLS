@@ -149,7 +149,7 @@ def diagonal_correction(K, v):
     return K
 
 
-def kpls(K, Y, ncp=None, auto_penalization=False, err_lim=1e-9, nloop_max=200, warning_tag=True):
+def kpls(K, Y, ncp=None, penalization=False, err_lim=1e-9, nloop_max=200, warning_tag=True):
     n = K.shape[0]
     py = Y.shape[1]
     # Array initialisation
@@ -162,12 +162,13 @@ def kpls(K, Y, ncp=None, auto_penalization=False, err_lim=1e-9, nloop_max=200, w
     u = Y[:,0]
     nloop = 0
     warning = None
+    Kcorr = None
     while nc < ncp:
         nc += 1
         err = np.inf
         while err > err_lim and nloop < nloop_max:
             if nc < 2:
-                if auto_penalization:
+                if penalization:
                     K = diagonal_correction(K, u)
                     Kcorr = K
             t = K @ u

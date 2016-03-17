@@ -50,7 +50,7 @@ class nopls(plsbase):
     """
     def __init__(self, X, Y, scaling=0,
                  kernel="linear",
-                 auto_penalization=True,
+                 penalization=True,
                  cvfold=None,
                  ncp=None,
                  err_lim=1e-9,
@@ -63,6 +63,7 @@ class nopls(plsbase):
         self.model = "nopls"
         self.err_lim = err_lim
         self.nloop_max = nloop_max
+        self.penalization = penalization
 
         assert kernels[kernel], "Kernel not supported!"
 
@@ -80,7 +81,7 @@ class nopls(plsbase):
         #####################
         self.T, self.U, self.C, self.Kcorr, self.warning = _kpls(self.K,
                                                                  self.Y,
-                                                                 auto_penalization=auto_penalization,
+                                                                 penalization=penalization,
                                                                  ncp=ncp,
                                                                  err_lim=err_lim,
                                                                  nloop_max=nloop_max)
@@ -104,33 +105,14 @@ class nopls(plsbase):
             self.B = None
             self.Bk = self.U @ np.linalg.inv(self.T.T @ self.Kcorr @ self.U) @ self.T.T @self.Y
 
-        if isinstance(cvfold, int) and cvfold > 0:
-            self.cvfold = cvfold
-            self.Yhatcv = np.zeros((self.n, self.py))
-            for i in np.arange(cvfold):
-                test = np.arange(i, self.n, cvfold)
-                Xtest = self.X[test, :]
-                Xtrain = np.delete(self.X, test, axis=0)
-                Ytrain = np.delete(self.Y, test, axis=0)
-
-                nopls_cv = nopls(Xtrain, Ytrain,
-                                         scaling=-1,
-                                         kernel=kernel,
-                                         auto_penalization=auto_penalization,
-                                         cvfold=None,
-                                         ncp=None,
-                                         err_lim=1e-9,
-                                         nloop_max=200,
-                                         statistics=False,
-                                         **kwargs)
-
-                self.Yhatcv[test,:] = nopls_cv.predict(Xtest, preprocessing=False, kernel=kernel)
-
-            self.Q2Y, self.Q2Ycol = self._calculateR2Y(self.Yhatcv)
-
-        else:
-            self.Q2Y = "NA"
-            self.Q2Ycol = "NA"
+        self.cvfold = cvfold
+        self.cross_validation(scaling=-1,
+                              kernel=kernel,
+                              penalization=penalization,
+                              err_lim=1e-9,
+                              nloop_max=200,
+                              statistics=False,
+                              **kwargs)
 
         if statistics:
             self.Yhat = self.predict(self.X, preprocessing=False, kernel=kernel)

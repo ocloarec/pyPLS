@@ -3,7 +3,7 @@ import numpy as np
 import sys
 import time
 
-def test_nopls():
+def test_pls():
     print("Testing noPLS with one column in Y...")
     out = pyPLS.nopls(Xt, Yt[:, 0], cvfold=7)
     out.summary()
@@ -21,8 +21,17 @@ def test_nopls():
     Dummy[Group2,:] = 1
     out = pyPLS.nopls(Xt,Dummy, scaling=1., cvfold=7)
     out.summary()
+    print()
+    print()
 
+    print("Testing noPLS-DA...")
     out = pyPLS.nopls(Xt,Dummy, scaling=1., cvfold=7, kernel="gaussian", sigma=100)
+    out.summary()
+    print()
+    print()
+
+    print("Testing PLS1...")
+    out = pyPLS.pls(Xt, Yt[:, 0], ncp=2, scaling=1., cvfold=7)
     out.summary()
 
 def test_kernel():
@@ -34,8 +43,8 @@ def test_kernel():
     print("Gaussian Kernel --- %s seconds ---" % (time.time() - start_time))
 
 if __name__ == '__main__':
-    Xt, Z, Yt = pyPLS.simulateData(50, 5, 1000, 10., signalToNoise=100.)
+    Xt, Z, Yt = pyPLS.simulateData(50, 5, 1000, 10., signalToNoise=1.)
     if "nopls" in sys.argv[1:]:
-        test_nopls()
+        test_pls()
     if "kernel" in sys.argv[1:]:
         test_kernel()
