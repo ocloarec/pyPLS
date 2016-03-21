@@ -97,7 +97,8 @@ class nopls(plsbase):
                 self.P = self.X.T.dot(self.T).dot(np.linalg.inv(self.T.T.dot(self.T)))
 
             # Regression coefficient and model prediction
-            self.B = self.X.T @ self.U @ np.linalg.inv(self.T.T @ self.Kcorr @ self.U) @ self.T.T @ self.Y
+            # self.B = self.X.T @ self.U @ np.linalg.inv(self.T.T @ self.Kcorr @ self.U) @ self.T.T @ self.Y
+            self.B = self.P @ np.linalg.inv(self.P.T @ self.P).dot(self.C.T)
             if self.B.ndim < 2:
                 self.B = np.expand_dims(self.B, axis=1)
         else:
