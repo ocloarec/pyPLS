@@ -1,11 +1,11 @@
 from __future__ import print_function
 import numpy as np
-from ._PLSbase import _pls
+from ._PLSbase import plsbase as pls_base
 from .utilities import nanmatprod
-from .engines import pls2 as _pls2
+from .engines import pls as _pls
 
 
-class pls2(_pls):
+class pls(pls_base):
     """
     This is the classic multivariate NIPALS PLS algorithm.
     Parameters:
@@ -50,17 +50,17 @@ class pls2(_pls):
                 return predicted Y
 
     """
-    def __init__(self, X, Y, a, cvfold=None, scaling=0):
+    def __init__(self, X, Y, ncp=1, cvfold=None, scaling=0):
 
-        _pls.__init__(self, X, Y, scaling=scaling)
+        pls_base.__init__(self, X, Y, scaling=scaling)
 
-        self.model = "pls2"
-        self.ncp = a
+        self.model = "pls"
+        self.ncp = ncp
         missingValues = False
         if self.missingValuesInX or self.missingValuesInY:
             # TODO: For now nissing values in both are dealt the same way Improve this
             missingValues = True
-        self.T, self.U, self.P, self.W, self.C = _pls2(self.X, self.Y, a, missing_values=missingValues)
+        self.T, self.U, self.P, self.W, self.C = _pls(self.X, self.Y, self.ncp, missing_values=missingValues)
 
         # Regression coefficient and model prediction
         self.B = self.W.dot(np.linalg.inv(self.P.T.dot(self.P))).dot(self.C.T)
@@ -69,27 +69,10 @@ class pls2(_pls):
         else:
             self.Yhat = self.X.dot(self.B)
 
-        self.R2Y, self.R2Ycol = self._calculateR2Y(self.Y, self.Yhat)
+        self.R2Y, self.R2Ycol = self._calculateR2Y(self.Yhat)
 
-        if isinstance(cvfold, int) and cvfold > 0:
-            self.cvfold = cvfold
-            self.Yhatcv = np.zeros((self.n, self.py))
-            for i in np.arange(cvfold):
-                test = np.arange(i, self.n, cvfold)
-                Xtest = self.X[test, :]
-                Xtrain = np.delete(self.X, test, axis=0)
-                ytrain = np.delete(self.Y, test, axis=0)
-                Tcv, Ucv, Pcv, Wcv, Ccv = _pls2(Xtrain, ytrain, a, missing_values=missingValues)
-                Bcv = Wcv.dot(np.linalg.inv(Pcv.T.dot(Pcv))).dot(Ccv.T)
-                if missingValues:
-                    self.Yhatcv[test, :] = nanmatprod(Xtest, Bcv)
-                else:
-                    self.Yhatcv[test, :] = Xtest.dot(Bcv)
-
-            self.Q2Y, self.Q2Ycol = self._calculateR2Y(self.Y, self.Yhatcv)
-
-        else:
-            self.Q2Y = "NA"
+        self.cvfold = cvfold
+        self.cross_validation()
 
         self.R2X = np.sum((self.T @ self.P.T)**2)/self.SSX
 

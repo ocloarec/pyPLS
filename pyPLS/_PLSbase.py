@@ -1,6 +1,8 @@
 import numpy as np
 from .utilities import isValid
 from .preprocessing import scaling as prepscaling
+from .kernel import IMPLEMENTED_KERNEL as kernels
+
 
 class lvmodel(object):
     def __init__(self):
@@ -28,21 +30,28 @@ class lvmodel(object):
 
     def loadings(self, n):
         if self.P is not None:
-            return np.asarray(self.P[:, n-1])
+            if n >= 1:
+                return np.asarray(self.P[:, n-1])
+            else:
+                return None
         else:
             return None
 
 
-class _pls(lvmodel):
-    def __init__(self, X, Y, scaling=0):
+class plsbase(lvmodel):
+    def __init__(self, X, Y, ncp=None, scaling=0, statistics=True):
         lvmodel.__init__(self)
 
         # Adding weights
         self.W = None
         self.B = None
+        self.Bk = None
+        self.Bcv = None
         self.R2Y = None
         self.R2Ycol = None
         self.cvfold = None
+        self.Yhatcv = None
+        self.penalization = "NA"
         # Checking if X and Y are valid
         X, nx, px = isValid(X)
         Y, ny, py = isValid(Y)
@@ -59,32 +68,39 @@ class _pls(lvmodel):
         if not isinstance(scaling, float):
             raise ValueError("scaling must be a number")
 
-        self.X, self.Xbar, self.Xstd = prepscaling(X, scaling)
-        self.Y, self.Ybar, self.Ystd = prepscaling(Y, scaling)
+        if scaling >= 0:
+            self.X, self.Xbar, self.Xstd = prepscaling(X, scaling)
+            self.Y, self.Ybar, self.Ystd = prepscaling(Y, scaling)
+        else:
+            self.X = X
+            self.Y = Y
+
         self.scaling = scaling
 
         self.missingValuesInX = False
-        if np.isnan(X).any():
-            self.missingValuesInX = True
-            self.SSX = np.nansum(self.X**2)
-        else:
-            self.SSX = np.sum(self.X**2)
-
         self.missingValuesInY = False
-        if np.isnan(Y).any():
-            self.missingValuesInY = True
-            self.SSY = np.nansum(self.Y**2)
-        else:
-            self.SSY = np.sum(self.Y**2)
+        if statistics:
+            if np.isnan(X).any():
+                self.missingValuesInX = True
+                self.SSX = np.nansum(np.square(self.X))
+            else:
+                self.SSX = np.sum(np.square(self.X))
+            if np.isnan(Y).any():
+                self.missingValuesInY = True
+                self.SSY = np.nansum(np.square(self.Y))
+            else:
+                self.SSY = np.sum(np.square(self.Y))
 
-        if np.isnan(Y).any():
-            self.SSYcol = np.nansum(self.Y**2, axis= 0)
-        else:
-            self.SSYcol = np.sum(self.Y**2, axis=0)
+            if np.isnan(Y).any():
+                self.SSYcol = np.nansum(np.square(self.Y), axis= 0)
+            else:
+                self.SSYcol = np.sum(np.square(self.Y), axis=0)
 
         self.n = n
         self.px = px
         self.py = py
+
+
 
     def weights(self, n):
         if self.W is not None:
@@ -92,31 +108,66 @@ class _pls(lvmodel):
         else:
             return None
 
-    def predict(self, Xnew):
+    def cross_validation(self,  **kwargs):
+        if isinstance(self.cvfold, int) and self.cvfold > 0:
+            self.Bcv = np.zeros((self.px,self.py, self.cvfold))
+            self.Yhatcv = np.zeros((self.n, self.py))
+            for i in np.arange(self.cvfold):
+                test = np.arange(i, self.n, self.cvfold)
+                Xtest = self.X[test, :]
+                Xtrain = np.delete(self.X, test, axis=0)
+                Ytrain = np.delete(self.Y, test, axis=0)
+                plscv = self.__class__(Xtrain, Ytrain, **kwargs)
+
+                self.Bcv[:, :, i] = plscv.B
+                self.Yhatcv[test,:] = plscv.predict(Xtest, preprocessing=False, **kwargs)
+
+            self.Q2Y, self.Q2Ycol = self._calculateR2Y(self.Yhatcv)
+        else:
+            self.Q2Y = None
+            self.Q2Ycol = None
+
+    def predict(self, Xnew, preprocessing=True, **kwargs):
+
+        for key, value in kwargs.items():
+            if key == "kernel":
+                kernel = value
+
+        Xnew, nnew, pxnew = isValid(Xnew, forPrediction=True)
+        if preprocessing:
+            Xnew = (Xnew - self.Xbar)
+            Xnew = Xnew / (self.Xstd ** self.scaling)
+
+        assert pxnew == self.px, "New observations do not have the same number of variables!!"
+
         if self.B is not None:
-            Xnew, nnew, pxnew = isValid(Xnew, forPrediction=True)
-            if pxnew == self.px:
-                Xw = (Xnew - self.Xbar)
-                Xw = Xw / (self.Xstd ** self.scaling)
 
-                Yhat = Xw @ self.B
-
+            Yhat = Xnew @ self.B
+            if preprocessing:
                 Yhat = Yhat * (self.Ystd ** self.scaling) + self.Ybar
 
-                return Yhat
 
-            else:
-                raise ValueError("New observations do not have the same number of variables!!")
 
-    def _calculateR2Y(self, realY, predictedY):
+        elif self.Bk is not None:
+            Kt = kernels[kernel](Xnew, Y=self.X)
+            Yhat = Kt @ self.Bk
+            if preprocessing:
+                Yhat = Yhat * (self.Ystd ** self.scaling) + self.Ybar
+        else:
+            Yhat = None
+        return Yhat
+
+    def _calculateR2Y(self, Yhat):
         """
-        Static method used to calculate R2y and Q2Y
-        :param realY:
-        :param predictedY:
-        :param missingValuesInY:
+        Method used to calculate R2y and Q2Y
+        :param X:
+        :param Y (optional):
+
         :return:
+        R2y or Q2y depending of the input
         """
-        ssy = (realY - predictedY)**2
+
+        ssy = np.square(self.Y - Yhat)
 
         if self.missingValuesInY:
             sserr = np.nansum(ssy)
@@ -149,6 +200,10 @@ class _pls(lvmodel):
         print("Summary of PLS:")
         print("---------------")
         print("Fitted using " + self.model)
+        try:
+            print("Penalisation: " + str(self.penalization))
+        except:
+            pass
         print("Number of components: " + str(self.ncp))
         if self.warning:
             print("Warning: " + self.warning)
@@ -159,16 +214,17 @@ class _pls(lvmodel):
                 print("    - Column " + str(i+1) + " : " + str(np.round(r2y,3)))
         else:
             print("Determination coefficient (R2Y): " + str(np.round(self.R2Y,3)))
-        print("Modeled variance in X: " + str(np.round(self.R2X,3)))
+        if self.R2X:
+            print("Modeled variance in X: " + str(np.round(self.R2X,3)))
+        if self.Q2Y:
+            print("Cross-validation:")
+            print("Number of fold: " + str(self.cvfold))
+            print("Cumulative Q2Y: " + str(np.round(self.Q2Y,3)))
 
-        print("Cross-validation:")
-        print("Number of fold: " + str(self.cvfold))
-        print("Cumulative Q2Y: " + str(np.round(self.Q2Y,3)))
-
-        if self.py > 1:
-            print("Q2 by column in Y:")
-            for i, r2y in enumerate(self.Q2Ycol):
-                print("    - Column " + str(i+1) + " : " + str(np.round(r2y,3)))
+            if self.py > 1:
+                print("Q2 by column in Y:")
+                for i, r2y in enumerate(self.Q2Ycol):
+                    print("    - Column " + str(i+1) + " : " + str(np.round(r2y,3)))
 
 
 

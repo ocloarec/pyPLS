@@ -52,9 +52,20 @@ def nanmatprod(ma, mb):
 
 
 def ROCanalysis(Yhat, classes, positive, npoints=50):
-    if isinstance(positive, str) or isinstance(positive, unicode):
+    """
+
+    :param Yhat:
+    :param classes:
+    :param positive:
+    :param npoints:
+    :return:
+    """
+    if isinstance(positive, str):
             positive = [positive]
-    classes = [di for di in classes]
+    if isinstance(positive, int):
+            positive = [str(positive)]
+
+    classes = [str(di) for di in classes]
     minLim = min(Yhat)
     maxLim = max(Yhat)
     limit = np.arange(minLim, maxLim, (maxLim-minLim)/npoints)
@@ -66,13 +77,13 @@ def ROCanalysis(Yhat, classes, positive, npoints=50):
     for k, lim in enumerate(limit):
         for i, y in enumerate(Yhat):
             if y < lim:
-                if classes[i] not in positive:
+                if classes[i] in positive:
                     falseNegative[k] += 1
                 else:
                     trueNegative[k] += 1
 
             else:
-                if classes[i] in positive:
+                if classes[i] not in positive:
                     falsePositive[k] += 1
                 else:
                     truePositive[k] += 1

@@ -9,5 +9,5 @@ setup(
     author='Olivier Cloarec',
     author_email='ocloarec@korrigan.co.uk',
     description='A package for Projection on Latent Structures',
-    requires=['numpy', 'pandas']
+    requires=['numpy', 'pandas', 'scipy']
 )
