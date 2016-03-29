@@ -13,6 +13,9 @@ def test_pls():
     print("Testing noPLS with two columns in Y...")
     out = pyPLS.nopls(Xt, Yt[:, 0:2], cvfold=7)
     out.summary()
+    print()
+    print()
+
 
     print("Testing noPLS-DA...")
     Ybar = np.mean(Yt[:,0])
@@ -24,7 +27,7 @@ def test_pls():
     print()
     print()
 
-    print("Testing noPLS-DA...")
+    print("Testing noPLS-DA with guassian kernel...")
     out = pyPLS.nopls(Xt,Dummy, scaling=1., cvfold=7, kernel="gaussian", sigma=100)
     out.summary()
     print()
@@ -43,7 +46,7 @@ def test_kernel():
     print("Gaussian Kernel --- %s seconds ---" % (time.time() - start_time))
 
 if __name__ == '__main__':
-    Xt, Z, Yt = pyPLS.simulateData(50, 5, 1000, 10., signalToNoise=100.)
+    Xt, Z, Yt = pyPLS.simulateData(50, 2, 1000, 10., signalToNoise=100.)
     if "nopls" in sys.argv[1:]:
         test_pls()
     if "kernel" in sys.argv[1:]:

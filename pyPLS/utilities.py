@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from .preprocessing import scaling
+
+
 def nanmatprod(ma, mb):
     """
     Compute matrix product of a and b in cas there is missing values.

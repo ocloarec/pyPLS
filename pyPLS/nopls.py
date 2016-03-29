@@ -2,6 +2,7 @@ from __future__ import print_function
 import numpy as np
 from ._PLSbase import plsbase
 from .utilities import nanmatprod
+from .preprocessing import diagonal_correction
 from .engines import kpls as _kpls
 from .kernel import IMPLEMENTED_KERNEL as kernels
 
@@ -68,6 +69,10 @@ class nopls(plsbase):
         assert kernels[kernel], "Kernel not supported!"
 
         self.K = kernels[kernel](self.X, **kwargs)
+         # Correction of the kernel matrix
+        if penalization:
+
+            self.K = diagonal_correction(self.K, np.mean(self.Y, axis=1))
 
         assert not np.isnan(self.K).any(), "Kernel calculation lead to missing values!"
 
@@ -79,9 +84,8 @@ class nopls(plsbase):
         assert not np.isnan(YY).any(), "A row of Y contains only missing values!"
 
         #####################
-        self.T, self.U, self.C, self.Kcorr, self.warning = _kpls(self.K,
+        self.T, self.U, self.C, self.warning = _kpls(self.K,
                                                                  self.Y,
-                                                                 penalization=penalization,
                                                                  ncp=ncp,
                                                                  err_lim=err_lim,
                                                                  nloop_max=nloop_max)
@@ -104,7 +108,7 @@ class nopls(plsbase):
         else:
             self.P = None
             self.B = None
-            self.Bk = self.U @ np.linalg.inv(self.T.T @ self.Kcorr @ self.U) @ self.T.T @self.Y
+            self.Bk = self.U @ np.linalg.inv(self.T.T @ self.K @ self.U) @ self.T.T @self.Y
 
         self.cvfold = cvfold
         self.cross_validation(scaling=-1,

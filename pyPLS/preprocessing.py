@@ -1,6 +1,26 @@
 import numpy as np
 
 
+def diagonal_correction(K, v):
+    n = K.shape[0]
+    correction = np.zeros((n, n))
+    H = (np.eye(n) - np.ones((n, n), dtype=float)/n)
+    for i, k in enumerate(K):
+        kw = np.delete(k, i)
+        kwc = kw - np.mean(kw)
+        vw = np.delete(v, i)
+        vwc = vw - np.mean(vw)
+        a = np.inner(kwc, vw)/np.sum(vwc**2)
+        b = np.mean(kw) - a * np.mean(vw)
+        kihat = v[i]*a + b
+        correction[i, i] = k[i] - kihat
+
+    K = K - correction
+    # ZZ is then recentred
+    K = H.T @ K @ H
+    return K
+
+
 def scaling(X, scale, center=True, axis=0):
     """
     Scale the array using the provided scaling factor
