@@ -3,7 +3,7 @@ import numpy as np
 from ._PLSbase import plsbase
 from .utilities import nanmatprod
 from .preprocessing import diagonal_correction
-from .engines import kpls as _kpls
+from .engines import kpls
 from .kernel import IMPLEMENTED_KERNEL as kernels
 
 class nopls(plsbase):
@@ -59,7 +59,7 @@ class nopls(plsbase):
                  statistics=True,
                  **kwargs):
 
-        plsbase.__init__(self, X, Y, scaling=scaling, statistics=statistics)
+        plsbase.__init__(self, X, Y, scaling=scaling, statistics=statistics, cvfold=cvfold)
 
         self.model = "nopls"
         self.err_lim = err_lim
@@ -84,11 +84,7 @@ class nopls(plsbase):
         assert not np.isnan(YY).any(), "A row of Y contains only missing values!"
 
         #####################
-        self.T, self.U, self.C, self.warning = _kpls(self.K,
-                                                                 self.Y,
-                                                                 ncp=ncp,
-                                                                 err_lim=err_lim,
-                                                                 nloop_max=nloop_max)
+        self.T, self.U, self.C, self.warning = kpls(self.K, self.Y, ncp=ncp, err_lim=err_lim, nloop_max=nloop_max)
         #####################
 
         # Deduction of the number of component fitted from the score array
@@ -110,7 +106,6 @@ class nopls(plsbase):
             self.B = None
             self.Bk = self.U @ np.linalg.inv(self.T.T @ self.K @ self.U) @ self.T.T @self.Y
 
-        self.cvfold = cvfold
         self.cross_validation(scaling=-1,
                               kernel=kernel,
                               penalization=penalization,
@@ -120,7 +115,8 @@ class nopls(plsbase):
                               **kwargs)
 
         if statistics:
-            self.Yhat = self.predict(self.X, preprocessing=False, kernel=kernel)
+            #self.Yhat = self.predict(self.X, preprocessing=False, kernel=kernel)
+            self.Yhat = self.T @ self.C.T
             self.R2Y, self.R2Ycol = self._calculateR2Y(self.Yhat)
             if kernel == "linear":
                 self.R2X = np.sum(np.square(self.T @ self.P.T))/self.SSX

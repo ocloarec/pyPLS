@@ -2,7 +2,7 @@ from __future__ import print_function
 import numpy as np
 from ._PLSbase import plsbase as pls_base
 from .utilities import nanmatprod
-from .engines import pls as _pls
+from .engines import pls as pls_engine
 
 
 class pls(pls_base):
@@ -51,28 +51,15 @@ class pls(pls_base):
 
     """
     def __init__(self, X, Y, ncp=1, cvfold=None, scaling=0):
-
-        pls_base.__init__(self, X, Y, scaling=scaling)
-
+        pls_base.__init__(self, X, Y, ncp=ncp, scaling=scaling, cvfold=cvfold)
         self.model = "pls"
-        self.ncp = ncp
         missingValues = False
         if self.missingValuesInX or self.missingValuesInY:
-            # TODO: For now nissing values in both are dealt the same way Improve this
+            # TODO: For now nissing values in both X and Y are dealt the same way -> Improve this
             missingValues = True
-        self.T, self.U, self.P, self.W, self.C = _pls(self.X, self.Y, self.ncp, missing_values=missingValues)
-
-        # Regression coefficient and model prediction
-        self.B = self.W.dot(np.linalg.inv(self.P.T.dot(self.P))).dot(self.C.T)
-        if self.missingValuesInX:
-            self.Yhat = nanmatprod(self.X, self.B)
-        else:
-            self.Yhat = self.X.dot(self.B)
-
+        self.T, self.U, self.P, self.W, self.C, self.B = pls_engine(self.X, self.Y, self.ncp, missing_values=missingValues)
+        self.Yhat = self.predict(self.X, preprocessing=False)
         self.R2Y, self.R2Ycol = self._calculateR2Y(self.Yhat)
-
-        self.cvfold = cvfold
-        self.cross_validation()
-
-        self.R2X = np.sum((self.T @ self.P.T)**2)/self.SSX
+        self.cross_validation(ncp=ncp)
+        self.R2X = np.sum(np.square(self.T @ self.P.T))/self.SSX
 
