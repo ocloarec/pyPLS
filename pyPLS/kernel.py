@@ -22,7 +22,6 @@ def linear(X, **kwargs):
 
     # Validation of X and Y
     X, nx, px = utilities.isValid(X)
-
     if Y is None:
         Y = X
     else:

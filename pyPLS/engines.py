@@ -114,9 +114,9 @@ def pls(X, Y, a, missing_values=False, err_lim=0.00001):
                 u = Y @ c / np.inner(c, c)
                 error = np.sum((w - wo)**2)
                 wo = w
-
+            innertt = np.inner(t, t)
             p = X.T @ t / np.inner(t, t)
-
+        outertp = np.outer(t, p)
         X = X - np.outer(t, p)
         Y = Y - np.outer(t, c)
 
@@ -126,30 +126,12 @@ def pls(X, Y, a, missing_values=False, err_lim=0.00001):
         W[:, i] = w
         C[:, i] = c
 
-    return T, U, P, W, C
+    B = W @ np.linalg.inv(P.T @ W) @ C.T
+
+    return T, U, P, W, C, B
 
 
-def diagonal_correction(K, v):
-    n = K.shape[0]
-    correction = np.zeros((n, n))
-    H = (np.eye(n) - np.ones((n, n), dtype=float)/n)
-    for i, k in enumerate(K):
-        kw = np.delete(k, i)
-        kwc = kw - np.mean(kw)
-        vw = np.delete(v, i)
-        vwc = vw - np.mean(vw)
-        a = np.inner(kwc, vw)/np.sum(vwc**2)
-        b = np.mean(kw) - a * np.mean(vw)
-        kihat = v[i]*a + b
-        correction[i, i] = k[i] - kihat
-
-    K = K - correction
-    # ZZ is then recentred
-    K = H.T @ K @ H
-    return K
-
-
-def kpls(K, Y, ncp=None, penalization=False, err_lim=1e-9, nloop_max=200, warning_tag=True):
+def kpls(K, Y, ncp=None, err_lim=1e-12, nloop_max=200, warning_tag=True):
     n = K.shape[0]
     py = Y.shape[1]
     # Array initialisation
@@ -159,24 +141,19 @@ def kpls(K, Y, ncp=None, penalization=False, err_lim=1e-9, nloop_max=200, warnin
     U = np.zeros((n,ncp))
     C = np.zeros((py,ncp))
     nc = 0
-    u = Y[:,0]
-    nloop = 0
     warning = None
-    Kcorr = None
     while nc < ncp:
         nc += 1
         err = np.inf
+        nloop = 0
+        u = np.mean(Y, axis=1)
         while err > err_lim and nloop < nloop_max:
-            if nc < 2:
-                if penalization:
-                    K = diagonal_correction(K, u)
-                    Kcorr = K
             t = K @ u
-            t = t / np.sqrt(np.sum(t**2))
+            t = t / np.sqrt(np.sum(np.square(t)))
             c = Y.T @ t
             u_new = Y @ c
-            u_new = u_new/np.sqrt(np.sum(u_new**2))
-            err = np.sum((u - u_new)**2)
+            u_new = u_new/np.sqrt(np.sum(np.square(u_new)))
+            err = np.sum(np.square(u - u_new))
             u = u_new
             nloop += 1
 
@@ -208,7 +185,7 @@ def kpls(K, Y, ncp=None, penalization=False, err_lim=1e-9, nloop_max=200, warnin
 
             break
 
-    return T, U, C, Kcorr, warning
+    return T, U, C, warning
 
 
 

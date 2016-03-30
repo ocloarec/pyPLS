@@ -1,5 +1,5 @@
 import numpy as np
-from .utilities import isValid
+from .utilities import isValid, nanmatprod
 from .preprocessing import scaling as prepscaling
 from .kernel import IMPLEMENTED_KERNEL as kernels
 
@@ -39,17 +39,17 @@ class lvmodel(object):
 
 
 class plsbase(lvmodel):
-    def __init__(self, X, Y, ncp=None, scaling=0, statistics=True):
+    def __init__(self, X, Y, ncp=None, scaling=0, statistics=True, cvfold=7):
         lvmodel.__init__(self)
-
-        # Adding weights
+        self.ncp = ncp
+        self.Yhat = None
         self.W = None
         self.B = None
         self.Bk = None
         self.Bcv = None
         self.R2Y = None
         self.R2Ycol = None
-        self.cvfold = None
+        self.cvfold = cvfold
         self.Yhatcv = None
         self.penalization = "NA"
         # Checking if X and Y are valid
@@ -100,8 +100,6 @@ class plsbase(lvmodel):
         self.px = px
         self.py = py
 
-
-
     def weights(self, n):
         if self.W is not None:
             return np.array(self.W[:, n-1])
@@ -129,6 +127,7 @@ class plsbase(lvmodel):
 
     def predict(self, Xnew, preprocessing=True, **kwargs):
 
+        kernel = None
         for key, value in kwargs.items():
             if key == "kernel":
                 kernel = value
@@ -136,17 +135,20 @@ class plsbase(lvmodel):
         Xnew, nnew, pxnew = isValid(Xnew, forPrediction=True)
         if preprocessing:
             Xnew = (Xnew - self.Xbar)
-            Xnew = Xnew / (self.Xstd ** self.scaling)
+            Xnew /=  np.power(self.Xstd, self.scaling)
 
         assert pxnew == self.px, "New observations do not have the same number of variables!!"
 
         if self.B is not None:
-
             Yhat = Xnew @ self.B
+
+            if self.missingValuesInX:
+                self.Yhat = nanmatprod(Xnew, self.B)
+            else:
+                self.Yhat = Xnew @ self.B
+
             if preprocessing:
-                Yhat = Yhat * (self.Ystd ** self.scaling) + self.Ybar
-
-
+                Yhat = Yhat * np.power(self.Ystd, self.scaling) + self.Ybar
 
         elif self.Bk is not None:
             Kt = kernels[kernel](Xnew, Y=self.X)
