@@ -26,7 +26,7 @@ def test_kernel():
     print("Gaussian Kernel --- %s seconds ---" % (time.time() - start_time))
 
 if __name__ == '__main__':
-    Xt, Z, Yt = pyPLS.simulateData(50, 2, 1000, 5., signalToNoise=100.)
+    Xt, Z, Yt = pyPLS.simulateData(50, 3, 1000, 5., signalToNoise=100.)
     if "nopls" in sys.argv[1:]:
         test_pls()
     if "kernel" in sys.argv[1:]:

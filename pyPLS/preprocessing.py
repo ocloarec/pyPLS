@@ -21,7 +21,7 @@ def diagonal_correction(K, v):
     return K
 
 
-def scaling(X, scale, center=True, axis=0):
+def scaling(X, scale, center=True, axis=0, Xbar=None, Xstd=None):
     """
     Scale the array using the provided scaling factor
 
@@ -39,19 +39,22 @@ def scaling(X, scale, center=True, axis=0):
     missing_value = False
     if np.isnan(X).any():
         missing_value = True
-
-    if missing_value:
-        Xbar = np.nanmean(X, axis=axis)
-        Sx = np.nanstd(X, axis=axis)
-    else:
-        Xbar = X.mean(axis=axis)
-        Sx = X.std(axis=axis)
+    if Xbar is None:
+        if missing_value:
+            Xbar = np.nanmean(X, axis=axis)
+        else:
+            Xbar = X.mean(axis=axis)
+    if Xstd is None:
+        if missing_value:
+            Xstd = np.nanstd(X, axis=axis)
+        else:
+            Xstd = X.std(axis=axis)
 
     if center:
         X = X - Xbar
 
-    X = X / (Sx**scale)
+    X = X / (Xstd**scale)
     if was_matrix:
         X = np.matrix(X)
 
-    return X, Xbar, Sx
+    return X, Xbar, Xstd

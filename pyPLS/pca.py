@@ -3,7 +3,7 @@ import pandas as pd
 
 from pyPLS import preprocessing
 from pyPLS._PLSbase import lvmodel
-from pyPLS.utilities import isValid
+from pyPLS.utilities import isValid, nanmatprod
 from .engines import pca as _pca
 
 
@@ -47,6 +47,7 @@ class prcomp(lvmodel):
         X, self.n, self.p = isValid(X)
 
         if type(X) == np.ndarray:
+            self.scaling = scaling
 
             X, self.Xbar, self.Xstd = preprocessing.scaling(X, scaling, center=center)
 
@@ -55,6 +56,16 @@ class prcomp(lvmodel):
             self.cumR2X = np.sum(self.R2X)
         else:
             raise ValueError("Your table (X) as an unsupported type")
+
+    def project(self, Xnew):
+        Xnew, n, p = isValid(Xnew)
+        Xnew, Xbar, Xstd = preprocessing.scaling(Xnew, self.scaling, Xbar=self.Xbar, Xstd=self.Xstd)
+        if np.isnan(Xnew).any():
+            Tnew = nanmatprod(Xnew, self.P)
+        else:
+            Tnew = Xnew @ self.P
+        E = Xnew - Tnew @ self.P.T
+        return Tnew, E
 
     def summary(self):
         missing_values = np.sum(np.isnan(self.E))
