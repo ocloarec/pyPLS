@@ -16,7 +16,7 @@ def diagonal_correction(K, v):
         correction[i, i] = k[i] - kihat
 
     K = K - correction
-    # ZZ is then recentred
+    # K is then recentred
     K = H.T @ K @ H
     return K
 

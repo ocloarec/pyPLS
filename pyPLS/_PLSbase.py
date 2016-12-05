@@ -8,6 +8,7 @@ class lvmodel(object):
     def __init__(self):
         self.T = None
         self.P = None
+        self.Tcv = None
 
         self.n = 0
         self.ncp = 0
@@ -126,7 +127,16 @@ class plsbase(lvmodel):
             self.Q2Ycol = None
 
     def predict(self, Xnew, preprocessing=True, **kwargs):
+        """
 
+        :param Xnew:
+        :param preprocessing:
+        :param kwargs:
+        :return:
+        """
+        ################################
+        #TODO: Need to include DModX and T2
+        ################################
         kernel = None
         for key, value in kwargs.items():
             if key == "kernel":
@@ -158,6 +168,64 @@ class plsbase(lvmodel):
         else:
             Yhat = None
         return Yhat
+
+    def DModX(self, **kwargs):
+        """
+
+        :param kwargs:
+        :return: Distance from model
+        """
+        n = np.arange(0, self.n)
+        cv = False
+        for key, value in kwargs.items():
+            if key == "n":
+                n = value
+            if key == "cv":
+                cv = value
+
+        if cv:
+            scores = self.Tcv
+        else:
+            scores = self.T
+
+        E = self.X[n,:] - scores[n,:].dot(self.P.T)
+
+
+        try:
+            out = np.sum(np.square(E), axis=1)
+        except ValueError:
+            out = np.sum(np.square(E))
+
+        return out
+
+    def T2(self, **kwargs):
+        """
+
+        :param kwargs:
+        :return: Return individual T2
+        """
+        n = np.arange(0, self.n)
+        cv = False
+        for key, value in kwargs.items():
+            if key == "n":
+                n = value
+            if key == "cv":
+                cv = value
+
+        if cv:
+            scores = self.Tcv
+        else:
+            scores = self.T
+
+        try:
+            out = np.sum(np.square(scores), axis=1)
+        except ValueError:
+            out = np.sum(np.square(scores))
+
+        return out
+
+
+
 
     def _calculateR2Y(self, Yhat):
         """

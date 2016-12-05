@@ -188,8 +188,18 @@ def kpls(K, Y, ncp=None, err_lim=1e-12, nloop_max=200, warning_tag=True):
     return T, U, C, warning
 
 
+
+
 def kopls(K, Y, ncp=None, err_lim=1e-12, nloop_max=200, warning_tag=True):
-    pass
+    n = K.shape[0]
+    py = Y.shape[1]
+    # Array initialisation
+    if ncp is None:
+        ncp = np.linalg.matrix_rank(K)
+
+
+
+
 
 
 

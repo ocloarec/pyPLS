@@ -69,11 +69,11 @@ class nopls(plsbase):
         assert kernels[kernel], "Kernel not supported!"
 
         self.K = kernels[kernel](self.X, **kwargs)
-         # Correction of the kernel matrix
+
+        ########### Correction of the kernel matrix
         if penalization:
-
             self.K = diagonal_correction(self.K, np.mean(self.Y, axis=1))
-
+        ###########################################
         assert not np.isnan(self.K).any(), "Kernel calculation lead to missing values!"
 
         if self.missingValuesInY:
