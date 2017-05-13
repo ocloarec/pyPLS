@@ -150,6 +150,8 @@ def corr(X,Y):
     else:
         raise ValueError("X and Y must have the same number of rows.")
 
+def localCorrelation(X):
+    pass
 
 
 if __name__ == '__main__':
