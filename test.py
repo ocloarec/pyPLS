@@ -27,6 +27,8 @@ def test_kernel():
 
 if __name__ == '__main__':
     Xt, Z, Yt = pyPLS.simulateData(50, 2, 1000, 5., signalToNoise=100.)
+    for i in np.arange(50):
+        Xt[i,i] = np.NaN
     if "nopls" in sys.argv[1:]:
         test_pls()
     if "kernel" in sys.argv[1:]:

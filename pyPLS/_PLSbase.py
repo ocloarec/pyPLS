@@ -140,12 +140,12 @@ class plsbase(lvmodel):
         assert pxnew == self.px, "New observations do not have the same number of variables!!"
 
         if self.B is not None:
-            Yhat = Xnew @ self.B
+            # Yhat = Xnew @ self.B
 
             if self.missingValuesInX:
-                self.Yhat = nanmatprod(Xnew, self.B)
+                Yhat = nanmatprod(Xnew, self.B)
             else:
-                self.Yhat = Xnew @ self.B
+                Yhat = Xnew @ self.B
 
             if preprocessing:
                 Yhat = Yhat * np.power(self.Ystd, self.scaling) + self.Ybar

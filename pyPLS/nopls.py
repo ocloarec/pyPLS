@@ -111,7 +111,7 @@ class nopls(plsbase):
                               penalization=penalization,
                               err_lim=1e-9,
                               nloop_max=200,
-                              statistics=False,
+                              statistics=True,
                               **kwargs)
 
         if statistics:
