@@ -25,11 +25,25 @@ def test_kernel():
     K2 = pyPLS.gaussian(Xt, sigma=3.0)
     print("Gaussian Kernel --- %s seconds ---" % (time.time() - start_time))
 
+def test_pca():
+    start_time = time.time()
+    # out = pyPLS.pca(Xt,4)
+    # print("PCA using svd on the kernel  --- %s seconds ---" % (time.time() - start_time))
+    # start_time = time.time()
+    out = pyPLS.pca(Xt, 4, method='nipals')
+    print("PCA using nipals  --- %s seconds ---" % (time.time() - start_time))
+    start_time = time.time()
+    out = pyPLS.pca(Xt, 4, method='longTable')
+    print("PCA using svd on the covariance matrix  --- %s seconds ---" % (time.time() - start_time))
+
+
 if __name__ == '__main__':
-    Xt, Z, Yt = pyPLS.simulateData(50, 2, 1000, 5., signalToNoise=100.)
-    for i in np.arange(50):
-        Xt[i,i] = np.NaN
+    Xt, Z, Yt = pyPLS.simulateData(600, 2, 30, 5., signalToNoise=100.)
+    # for i in np.arange(50):
+    #     Xt[i,i] = np.NaN
     if "nopls" in sys.argv[1:]:
         test_pls()
     if "kernel" in sys.argv[1:]:
         test_kernel()
+    if "pca" in sys.argv[1:]:
+        test_pca()

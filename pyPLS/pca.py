@@ -4,7 +4,7 @@ import pandas as pd
 from pyPLS import preprocessing
 from pyPLS._PLSbase import lvmodel
 from pyPLS.utilities import isValid
-from .engines import pca as _pca
+from .engines import pca as _pca, nipals, longtable_pca
 
 
 class prcomp(lvmodel):
@@ -39,20 +39,39 @@ class prcomp(lvmodel):
 
     """
 
-    def __init__(self, X, a, scaling=0, center=True):
+    def __init__(self, X, a, scaling=0, center=True, method='svd'):
 
         lvmodel.__init__(self)
         self.model = "pca"
 
         X, self.n, self.p = isValid(X)
 
+        if np.isnan(X).any():
+            self.missingValuesInX = True
+            self.SSX = np.nansum(np.square(X))
+        else:
+            self.SSX = np.sum(np.square(X))
+
         if type(X) == np.ndarray:
 
             X, self.Xbar, self.Xstd = preprocessing.scaling(X, scaling, center=center)
+            if method == 'svd':
+                self.T, self.P, self.E, self.R2X = _pca(X, a)
+            elif method == 'nipals':
+                self.T, self.P, self.E, self.R2X = nipals(X, a)
+            elif method == 'longTable':
+                self.T, self.P, self.E, self.R2X = longtable_pca(X, a)
+            else:
+                raise ValueError("Unknown method for PCA")
 
-            self.T, self.P, self.E, self.R2X = _pca(X, a)
+            if self.R2X is None:
+                self.R2X = np.sum(np.square(self.T @ self.P.T)) / self.SSX
+                self.cumR2X = np.sum(self.R2X)
+            else:
+                self.cumR2X = np.sum(self.R2X)
+
             self.ncp = a
-            self.cumR2X = np.sum(self.R2X)
+
         else:
             raise ValueError("Your table (X) as an unsupported type")
 
