@@ -125,7 +125,7 @@ class plsbase(lvmodel):
             self.Q2Y = None
             self.Q2Ycol = None
 
-    def predict(self, Xnew, preprocessing=True, **kwargs):
+    def predict(self, Xnew, preprocessing=True, stats=True, **kwargs):
 
         kernel = None
         for key, value in kwargs.items():

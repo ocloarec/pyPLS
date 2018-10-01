@@ -1,7 +1,7 @@
 from __future__ import print_function
 import numpy as np
 from ._PLSbase import plsbase as pls_base
-from .utilities import nanmatprod
+from .utilities import nanmatprod, isValid
 from .engines import pls as pls_engine
 
 
@@ -58,8 +58,50 @@ class pls(pls_base):
             # TODO: For now nissing values in both X and Y are dealt the same way -> Improve this
             missingValues = True
         self.T, self.U, self.P, self.W, self.C, self.B = pls_engine(self.X, self.Y, self.ncp, missing_values=missingValues)
+        self.Wstar = self.W @ np.linalg.inv(self.P.T @ self.W)
         self.Yhat = self.predict(self.X, preprocessing=False)
         self.R2Y, self.R2Ycol = self._calculateR2Y(self.Yhat)
         self.cross_validation(ncp=ncp)
         self.R2X = np.sum(np.square(self.T @ self.P.T))/self.SSX
 
+
+    def predict(self, Xnew, preprocessing=True, statistics=False, **kwargs):
+
+
+        Xnew, nnew, pxnew = isValid(Xnew, forPrediction=True)
+        if preprocessing:
+            Xnew = (Xnew - self.Xbar)
+            Xnew /= np.power(self.Xstd, self.scaling)
+
+        assert pxnew == self.px, "New observations do not have the same number of variables!!"
+
+        if statistics:
+            That = Xnew @ self.W
+            Xpred = That @ self.P.T
+            Xres = Xnew - Xpred
+            Xnew2 = np.square(Xres)
+
+            if np.isnan(Xnew2).any():
+                ssrx = np.nansum(Xnew2, axis=0)
+            else:
+                ssrx = np.sum(Xnew2, axis=0)
+            stats = {'That':That, 'ESS':ssrx}
+
+
+        if self.B is not None:
+            # Yhat = Xnew @ self.B
+
+            if self.missingValuesInX:
+                Yhat = nanmatprod(Xnew, self.B)
+            else:
+                Yhat = Xnew @ self.B
+
+            if preprocessing:
+                Yhat = Yhat * np.power(self.Ystd, self.scaling) + self.Ybar
+        else:
+            Yhat = None
+
+        if statistics:
+            return Yhat, stats
+        else:
+            return Yhat
