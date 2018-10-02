@@ -44,6 +44,10 @@ def prediction():
     Yhat, stats = out.predict(Xt, statistics=True)
     print(stats['ESS'])
 
+    out = pyPLS.pca(Xt, 3, scaling=1)
+    That = out.predict(Xt)
+    print(That)
+
 if __name__ == '__main__':
     Xt, Z, Yt = pyPLS.simulateData(600, 2, 30, 5., signalToNoise=100.)
     # for i in np.arange(50):

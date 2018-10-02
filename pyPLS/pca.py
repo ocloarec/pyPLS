@@ -43,6 +43,7 @@ class prcomp(lvmodel):
 
         lvmodel.__init__(self)
         self.model = "pca"
+        self.scaling = scaling
 
         X, self.n, self.p = isValid(X)
 
@@ -74,6 +75,32 @@ class prcomp(lvmodel):
 
         else:
             raise ValueError("Your table (X) as an unsupported type")
+
+    def predict(self, Xnew, preprocessing=True, statistics=False, **kwargs):
+        Xnew, nnew, pxnew = isValid(Xnew, forPrediction=True)
+        if preprocessing:
+            Xnew = (Xnew - self.Xbar)
+            Xnew /= np.power(self.Xstd, self.scaling)
+
+        assert pxnew == self.p, "New observations do not have the same number of variables!!"
+
+        That = Xnew @ self.P
+
+        if statistics:
+            Xpred = That @ self.P.T
+            Xres = Xnew - Xpred
+            Xnew2 = np.square(Xres)
+
+            if np.isnan(Xnew2).any():
+                ssrx = np.nansum(Xnew2, axis=0)
+            else:
+                ssrx = np.sum(Xnew2, axis=0)
+            stats = {'That': That, 'ESS': ssrx}
+            return That, stats
+
+        else:
+            return That
+
 
     def summary(self):
         missing_values = np.sum(np.isnan(self.E))
