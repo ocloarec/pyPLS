@@ -1,9 +1,9 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='pyPLS',
     version='0.1.1',
-    packages=['', 'pyPLS'],
+    packages=find_packages(),
     url='',
     license='MIT',
     author='Olivier Cloarec',
