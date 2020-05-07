@@ -71,8 +71,8 @@ class nopls(plsbase):
         self.K = kernels[kernel](self.X, **kwargs)
          # Correction of the kernel matrix
         if penalization:
-
-            self.K = diagonal_correction(self.K, np.mean(self.Y, axis=1))
+            self.K  = self.K - np.diag(np.diag(self.K)) * penalization
+            # self.K = diagonal_correction(self.K, np.mean(self.Y, axis=1))
 
         assert not np.isnan(self.K).any(), "Kernel calculation lead to missing values!"
 
@@ -116,7 +116,8 @@ class nopls(plsbase):
 
         if statistics:
             #self.Yhat = self.predict(self.X, preprocessing=False, kernel=kernel)
-            self.Yhat = self.T @ self.C.T
+            # self.Yhat = self.T @ self.C.T
+            self.Yhat = self.predict(self.X, preprocessing=False)
             self.R2Y, self.R2Ycol = self._calculateR2Y(self.Yhat)
             if kernel == "linear":
                 self.R2X = np.sum(np.square(self.T @ self.P.T))/self.SSX

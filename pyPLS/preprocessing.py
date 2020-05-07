@@ -2,6 +2,7 @@ import numpy as np
 
 
 def diagonal_correction(K, v):
+
     n = K.shape[0]
     correction = np.zeros((n, n))
     H = (np.eye(n) - np.ones((n, n), dtype=float)/n)

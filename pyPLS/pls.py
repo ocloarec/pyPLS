@@ -66,41 +66,41 @@ class pls(pls_base):
 
 
     def predict(self, Xnew, preprocessing=True, statistics=False, **kwargs):
-
-
+    
+    
         Xnew, nnew, pxnew = isValid(Xnew, forPrediction=True)
         if preprocessing:
             Xnew = (Xnew - self.Xbar)
             Xnew /= np.power(self.Xstd, self.scaling)
-
+    
         assert pxnew == self.px, "New observations do not have the same number of variables!!"
-
+    
         if statistics:
             That = Xnew @ self.W
             Xpred = That @ self.P.T
             Xres = Xnew - Xpred
             Xnew2 = np.square(Xres)
-
+    
             if np.isnan(Xnew2).any():
                 ssrx = np.nansum(Xnew2, axis=0)
             else:
                 ssrx = np.sum(Xnew2, axis=0)
             stats = {'That':That, 'ESS':ssrx}
-
-
+    
+    
         if self.B is not None:
             # Yhat = Xnew @ self.B
-
+    
             if self.missingValuesInX:
                 Yhat = nanmatprod(Xnew, self.B)
             else:
                 Yhat = Xnew @ self.B
-
+    
             if preprocessing:
                 Yhat = Yhat * np.power(self.Ystd, self.scaling) + self.Ybar
         else:
             Yhat = None
-
+    
         if statistics:
             return Yhat, stats
         else:
