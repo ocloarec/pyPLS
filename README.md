@@ -20,4 +20,14 @@ To plot the output of the different function `matplotlib` could be also installe
 
 # Installation
 
-As it is still a package under development, it is advised to install it as such. This way code can me modified and tested directly in the same notebook environment. This also mean that after installation, a simple pull from the GitHub repository could provide you. In the directory So installing from this notebook run the following cell:
+As it is still a package under development, it is advised to install it as such. This way code can me modified and tested directly in the same notebook environment. This also means that after installation, a simple pull from the GitHub repository could provide you. First clone the repo with:
+
+`git clone https://github.com/ocloarec/pyPLS.git`
+
+then 
+
+`cd pyPLS`
+`python setup.py install develop`
+
+That's it, you can now start to use this package. 
+
