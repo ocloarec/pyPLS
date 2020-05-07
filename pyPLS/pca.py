@@ -3,8 +3,9 @@ import pandas as pd
 
 from pyPLS import preprocessing
 from pyPLS._PLSbase import lvmodel
-from pyPLS.utilities import isValid, nanmatprod
-from .engines import pca as _pca
+from pyPLS.utilities import isValid
+from .engines import pca as _pca, nipals, longtable_pca
+
 
 
 class prcomp(lvmodel):
@@ -39,33 +40,69 @@ class prcomp(lvmodel):
 
     """
 
-    def __init__(self, X, a, scaling=0, center=True):
+    def __init__(self, X, a, scaling=0, center=True, method='svd'):
 
         lvmodel.__init__(self)
         self.model = "pca"
+        self.scaling = scaling
 
         X, self.n, self.p = isValid(X)
+
+        if np.isnan(X).any():
+            self.missingValuesInX = True
+            self.SSX = np.nansum(np.square(X))
+        else:
+            self.SSX = np.sum(np.square(X))
 
         if type(X) == np.ndarray:
             self.scaling = scaling
 
             X, self.Xbar, self.Xstd = preprocessing.scaling(X, scaling, center=center)
+            if method == 'svd':
+                self.T, self.P, self.E, self.R2X = _pca(X, a)
+            elif method == 'nipals':
+                self.T, self.P, self.E, self.R2X = nipals(X, a)
+            elif method == 'longTable':
+                self.T, self.P, self.E, self.R2X = longtable_pca(X, a)
+            else:
+                raise ValueError("Unknown method for PCA")
 
-            self.T, self.P, self.E, self.R2X = _pca(X, a)
+            if self.R2X is None:
+                self.R2X = np.sum(np.square(self.T @ self.P.T)) / self.SSX
+                self.cumR2X = np.sum(self.R2X)
+            else:
+                self.cumR2X = np.sum(self.R2X)
+
             self.ncp = a
-            self.cumR2X = np.sum(self.R2X)
+
         else:
             raise ValueError("Your table (X) as an unsupported type")
 
-    def project(self, Xnew):
-        Xnew, n, p = isValid(Xnew)
-        Xnew, Xbar, Xstd = preprocessing.scaling(Xnew, self.scaling, Xbar=self.Xbar, Xstd=self.Xstd)
-        if np.isnan(Xnew).any():
-            Tnew = nanmatprod(Xnew, self.P)
+
+    def predict(self, Xnew, preprocessing=True, statistics=False, **kwargs):
+        Xnew, nnew, pxnew = isValid(Xnew, forPrediction=True)
+        if preprocessing:
+            Xnew = (Xnew - self.Xbar)
+            Xnew /= np.power(self.Xstd, self.scaling)
+
+        assert pxnew == self.p, "New observations do not have the same number of variables!!"
+
+        That = Xnew @ self.P
+
+        if statistics:
+            Xpred = That @ self.P.T
+            Xres = Xnew - Xpred
+            Xnew2 = np.square(Xres)
+
+            if np.isnan(Xnew2).any():
+                ssrx = np.nansum(Xnew2, axis=0)
+            else:
+                ssrx = np.sum(Xnew2, axis=0)
+            stats = {'That': That, 'ESS': ssrx}
+            return That, stats
+
         else:
-            Tnew = Xnew @ self.P
-        E = Xnew - Tnew @ self.P.T
-        return Tnew, E
+            return That
 
     def summary(self):
         missing_values = np.sum(np.isnan(self.E))

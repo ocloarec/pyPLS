@@ -6,3 +6,4 @@ from .preprocessing import scaling
 from .simulation import simulateData
 from .utilities import corr
 from .kernel import linear, gaussian
+

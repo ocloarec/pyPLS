@@ -69,8 +69,16 @@ def nipals(X, a):
 
         X -= np.outer(t, p)
 
-    return T, P, X
+    return T, P, X, None
 
+def longtable_pca(X,n):
+    #Used for very long table
+    #TODO: Implement missing data
+    U, S, V = np.linalg.svd(X.T.dot(X))
+    P = U[:, :n]
+    T = X.dot(P)
+    X -= T.dot(P.T)
+    return T, P, X, None
 
 def pls(X, Y, a, missing_values=False, err_lim=0.00001):
     n, px = X.shape

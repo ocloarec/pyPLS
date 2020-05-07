@@ -68,7 +68,7 @@ def gaussian(X, **kwargs):
     else:
         assert float(sigma), "sigma must be a number"
 
-    # Kernal calculation
+    # Kernel calculation
     if np.isnan(X).any() or np.isnan(Y).any():
         K = np.zeros((nx, ny))
         if nx == ny:

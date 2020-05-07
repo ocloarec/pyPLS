@@ -74,6 +74,7 @@ class nopls(plsbase):
         if penalization:
             self.K = diagonal_correction(self.K, np.mean(self.Y, axis=1))
         ###########################################
+
         assert not np.isnan(self.K).any(), "Kernel calculation lead to missing values!"
 
         if self.missingValuesInY:
@@ -111,12 +112,13 @@ class nopls(plsbase):
                               penalization=penalization,
                               err_lim=1e-9,
                               nloop_max=200,
-                              statistics=False,
+                              statistics=True,
                               **kwargs)
 
         if statistics:
             #self.Yhat = self.predict(self.X, preprocessing=False, kernel=kernel)
-            self.Yhat = self.T @ self.C.T
+            # self.Yhat = self.T @ self.C.T
+            self.Yhat = self.predict(self.X, preprocessing=False)
             self.R2Y, self.R2Ycol = self._calculateR2Y(self.Yhat)
             if kernel == "linear":
                 self.R2X = np.sum(np.square(self.T @ self.P.T))/self.SSX

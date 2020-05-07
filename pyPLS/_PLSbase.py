@@ -126,9 +126,9 @@ class plsbase(lvmodel):
             self.Q2Y = None
             self.Q2Ycol = None
 
-    def predict(self, Xnew, preprocessing=True, **kwargs):
-        """
 
+    def predict(self, Xnew, preprocessing=True, stats=True, **kwargs):
+        """
         :param Xnew:
         :param preprocessing:
         :param kwargs:
@@ -150,12 +150,12 @@ class plsbase(lvmodel):
         assert pxnew == self.px, "New observations do not have the same number of variables!!"
 
         if self.B is not None:
-            Yhat = Xnew @ self.B
+            # Yhat = Xnew @ self.B
 
             if self.missingValuesInX:
-                self.Yhat = nanmatprod(Xnew, self.B)
+                Yhat = nanmatprod(Xnew, self.B)
             else:
-                self.Yhat = Xnew @ self.B
+                Yhat = Xnew @ self.B
 
             if preprocessing:
                 Yhat = Yhat * np.power(self.Ystd, self.scaling) + self.Ybar
