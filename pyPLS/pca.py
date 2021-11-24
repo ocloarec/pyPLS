@@ -44,6 +44,7 @@ class prcomp(lvmodel):
         lvmodel.__init__(self)
         self.model = "pca"
         self.scaling = scaling
+        self.missingValuesInX = False
 
         X, self.n, self.p = isValid(X)
 
@@ -59,7 +60,7 @@ class prcomp(lvmodel):
             if method == 'svd':
                 self.T, self.P, self.E, self.R2X = _pca(X, a)
             elif method == 'nipals':
-                self.T, self.P, self.E, self.R2X = nipals(X, a)
+                self.T, self.P, self.E, self.R2X = nipals(X, a, missing_values=self.missingValuesInX)
             elif method == 'longTable':
                 self.T, self.P, self.E, self.R2X = longtable_pca(X, a)
             else:

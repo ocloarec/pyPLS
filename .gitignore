@@ -60,3 +60,5 @@ docs/_build/
 target/
 
 .DS_Store
+Notebooks/data/
+Notebooks/test/

@@ -1,7 +1,7 @@
 import numpy as np
 from .utilities import nanmatprod
 
-ELIM = 1e-12
+ELIM = 1e-6
 
 
 def pca(X, a):
@@ -39,23 +39,33 @@ def pca(X, a):
         raise ValueError("X must be a 2D numpy array")
 
 
-def nipals(X, a):
+def nipals(X, a, missing_values=False):
 
     P = None
     T = None
     p = np.zeros((X.shape[1],))
 
     for i in np.arange(a):
-        t = np.mean(X, axis=1)
+        t = np.nanmean(X, axis=1)
         nloop = 0
         err = np.Inf
-        while err > ELIM and nloop < 1000:
-            p_old = p
-            p = X.T @ t / np.sum(t * t)
-            p = p / np.sqrt(sum(p * p))
-            t = X @ p
-            err = np.sum((p_old - p) * (p_old - p))
-            nloop += 1
+
+        if missing_values:
+            while err > ELIM and nloop < 1000:
+                p_old = p
+                p = nanmatprod(X.T, t) / np.sum(t * t)
+                p = p / np.sqrt(sum(p * p))
+                t = nanmatprod(X, p)
+                err = np.sum((p_old - p) * (p_old - p))
+                nloop += 1 
+        else:
+            while err > ELIM and nloop < 1000:
+                p_old = p
+                p = X.T @ t / np.sum(t * t)
+                p = p / np.sqrt(sum(p * p))
+                t = X @ p
+                err = np.sum((p_old - p) * (p_old - p))
+                nloop += 1
 
         if P is None:
             P = p
