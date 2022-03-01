@@ -82,9 +82,9 @@ class pls(pls_base):
             Xnew2 = np.square(Xres)
     
             if np.isnan(Xnew2).any():
-                ssrx = np.nansum(Xnew2, axis=0)
+                ssrx = np.nansum(Xnew2, axis=1)
             else:
-                ssrx = np.sum(Xnew2, axis=0)
+                ssrx = np.sum(Xnew2, axis=1)
             stats = {'That':That, 'ESS':ssrx}
     
     
